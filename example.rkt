@@ -21,7 +21,9 @@
    "Content-Length: {len}"
    ""
    "{body}"]
-  ;;(pretty-print d)
+  ;; Handler function expressions. `d' is the input dictionary.
+  (displayln "Input dict is:")
+  (pretty-print d)
   (hash 'Status "200 OK"
         'date (seconds->gmt-string)
         'type "text/plain"
@@ -35,15 +37,19 @@
    "Host: {endpoint}"
    "Authorization: {auth}"
    "Content-Type: application/x-www-form-urlencoded"
+   "Content-Length: {len}"
    ""
    "a={a}&b={b}"]
   ["HTTP/1.1 {Status}"
    "Date: {Date}"
    ""
-   "{ItemID}"]
-    (hash 'Status "200 OK"
+   "{body}"]
+  ;; Handler function expressions. `d' is the input dictionary.
+  (displayln "Input dict is:")
+  (pretty-print d)
+  (hash 'Status "200 OK"
         'Date (seconds->gmt-string)
-        'ItemID "fed77asdff"))
+        'body "fed77asdff"))
 
 ;; Complicated real-world example: The Amazon Glacier "upload archive" API.
 ;;
@@ -51,8 +57,7 @@
 ;; the Racket reader.
 (defapi example-upload-archive-api
   "Upload Archive"
-[#<<--
-This operation adds an archive to a vault. For a successful upload,
+  ["This operation adds an archive to a vault. For a successful upload,
 your data is durably persisted. In response, Amazon Glacier returns
 the archive ID in the x-amz-archive-id header of the response. You
 should save the archive ID returned so that you can access the archive
@@ -68,9 +73,7 @@ returns the archive description when you either retrieve the archive
 or get the vault inventory. Amazon Glacier does not interpret the
 description in any way. An archive description does not need to be
 unique. You cannot use the description to retrieve or sort the archive
-list.
---
-]
+list."]
 [#<<--
 POST /{account-id}/vaults/{vault-name}/archives HTTP/1.1
 Host: {host}
@@ -81,6 +84,7 @@ x-amz-archive-description: {description}
 x-amz-sha256-tree-hash: {tree-hash}
 x-amz-content-sha256: {linear-hash}
 Content-Length: {length}
+
 --
 ]
 [#<<--
@@ -90,8 +94,12 @@ Date: {Date}
 x-amz-sha256-tree-hash: {ChecksumComputedByAmazonGlacier}
 Location: {Location}
 x-amz-archive-id: {ArchiveId}
+
 --
 ]
+;; Handler function expressions. `d' is the input dictionary.
+(displayln "Input dict is:")
+(pretty-print d)
 (hash 'Status "201 Created"
       'x-amzn-RequestId "adsfadf"
       'Date (seconds->gmt-string)
@@ -113,6 +121,15 @@ Content-Length: 100
 --
 )
 
+(define example-get-request-CRLF
+  (string-join
+   (list
+    "GET /user/greg/items/21?a=a&b=b HTTP/1.1"
+    "Host: my.host.com"
+    "Authorization: MyFakeAuthorization"
+    "Content-Length: 100")
+   "\r\n"))
+
 (define example-get-response
 #<<--
 HTTP/1.1 200 OK
@@ -126,7 +143,7 @@ abcde
 
 (define example-post-request
 #<<--
-POST /user/greg/items/21?a=a&b=b HTTP/1.1
+POST /user/greg/items/21 HTTP/1.1
 Host: my.host.com
 Authorization: MyFakeAuthorization
 Content-Type: application/x-www-form-urlencoded
@@ -159,33 +176,63 @@ asdfasdfasdf
 ;; (pretty-print hapi)
 
 ;; ;; Generate documentation for the entire API.
-;; (displayln (string-join (map api->markdown (hash-values hapi)) "\n"))
+;; (displayln (string-join (map api->markdown (apis)) "\n"))
 
-;; ;; Get requests and dispatch them.
-;; (let ()
-  (displayln (dispatch? example-get-request))
-;;   (displayln (dispatch? example-postrequest))
-;;   (displayln (dispatch? upload-archive-request))
-;;   (displayln (dispatch? "GET /not-found HTTP 1.0\n\n")))
+;; Use the api to receive requests as a server and dispatch them.
+#|
+(let ()
+  (displayln (dispatch example-get-request))
+  (displayln (dispatch example-get-request-CRLF))
+  (displayln (dispatch example-post-request))
+  (displayln (dispatch upload-archive-request))
+  (displayln (dispatch "GET /not-found HTTP 1.0\n\n")))
+|#
 
-;; ;; For each API function, show its name, inputs, outputs.
-;; (pretty-print
-;;  (map list
-;;       (map api-name (hash-values hapi))
-;;       (map api-inputs (hash-values hapi))
-;;       (map api-outputs (hash-values hapi))))
+;; For each API function, show its name, inputs, outputs.
+#|
+(pretty-print
+ (map list
+      (map api-name (apis))
+      (map api-inputs (apis))
+      (map api-outputs (apis))))
+|#
 
-;; (for-each pretty-print (hash-values hapi))
+;; (for-each pretty-print (apis))
 
-;; ;; Client->Server
-;; (displayln (dict->request example-get-api
-;;                           (hash 'user "greg"
-;;                                 'item "1"
-;;                                 'a "a"
-;;                                 'b "b"
-;;                                 'date (seconds->gmt-string)
-;;                                 'endpoint "endpoint"
-;;                                 'auth "auth")))
+;; Use the api to make a request as a client.
+#|
+(define (pretend-authorizer d)
+  ;; pretend some kind of auth based on other values in dict
+  (string-join (list (dict-ref d 'user) (dict-ref d 'item) (dict-ref d 'date))
+               "++"))
+(displayln (dict->request example-get-api
+                          (hash 'user "greg"
+                                'item "1"
+                                'a "a"
+                                'b "b"
+                                'date (seconds->gmt-string)
+                                'endpoint "endpoint"
+                                'auth pretend-authorizer)))
+(displayln (response->dict example-get-api
+                           example-get-response))
+|#
 
-;; (displayln (response->dict example-get-api
-;;                            example-get-response))
+;; Procedures taking keyword arguments in lieu of a single dict? arg:
+
+(define f (make-api-keyword-procedure example-get-api))
+(apply-dict f (hash 'user "greg"
+                    'item "1"
+                    'a "a"
+                    'b "b"
+                    ;;'UNDEFINED "UNDEFINED" ;test cathing bad keyword
+                    'date (seconds->gmt-string)
+                    'endpoint "endpoint"
+                    'auth "auth"))
+(f #:user "greg"
+   #:item "1"
+   #:a "a"
+   #:b "b"
+   ;;#:UNDEFINED "undefined" ;test catching bad keyword
+   #:date (seconds->gmt-string)
+   #:endpoint "endpoint"
+   #:auth "auth")
