@@ -9,7 +9,7 @@
          
 (provide apis
          (struct-out api)
-         defapi
+         ;; defapi
          dict->request
          request->dict
          dict->response
@@ -22,50 +22,54 @@
          api->markdown
          make-api-keyword-procedure
          apply-dict
+         wffi-lib
+         get-wffi-obj
          )
 
 (struct api
-        (proc            ;(dict? . -> . dict?)
-         name            ;string?
+        (name            ;string?
          desc            ;string?
          req             ;string?
          resp            ;string?
+         ;; For using to implement a server:
          route-px        ;pregexp?
          path-px         ;pregexp?
+         ;; Request:
          path-syms       ;(listof symbol?)
          query-dict      ;(dict string? symbol?)
-         heads-dict      ;(dict string? symbol?)
+         head-dict       ;(dict string? symbol?)
          form-dict       ;(dict string? symbol?)
-         resp-heads-dict ;(dict string? symbol)
+         ;; Response:
+         resp-head-dict  ;(dict string? symbol)
         ) #:transparent)
 
-(define apis (make-parameter (list)))   ;listof api?
-(define (register-api! a)
-  (apis (cons a (apis))))
+(define apis (make-parameter (hash))) ;hashof api? => (dict? -> dict?)
+(define (register-api! a proc)
+  (hash-set! apis a proc))
              
-(define-syntax-parameter d
-  (lambda (stx)
-    (raise-syntax-error #f "d is only bound inside an api handler")))
-(provide d)
+;; (define-syntax-parameter d
+;;   (lambda (stx)
+;;     (raise-syntax-error #f "d is only bound inside an api handler")))
+;; (provide d)
 
-(define-syntax-rule (defapi name title [desc ...] [req ...] [resp ...]
-                      body0 body ...)
-  (begin
-    (define name (init-api (lambda (dict)
-                             (splicing-syntax-parameterize
-                                 ([d (make-rename-transformer #'dict)])
-                               body0 body ...))
-                           `title
-                           (multi-line `(desc ...))
-                           (multi-line `(req ...))
-                           (multi-line `(resp ...))))
-    (register-api! name)))
+;; (define-syntax-rule (defapi name title [desc ...] [req ...] [resp ...]
+;;                       body0 body ...)
+;;   (begin
+;;     (define name (init-api (lambda (dict)
+;;                              (splicing-syntax-parameterize
+;;                                  ([d (make-rename-transformer #'dict)])
+;;                                body0 body ...))
+;;                            `title
+;;                            (multi-line `(desc ...))
+;;                            (multi-line `(req ...))
+;;                            (multi-line `(resp ...))))
+;;     (register-api! name)))
 
-(define (multi-line xs)
-  (string-append (string-join xs "\n") "\n"))
+;; (define (multi-line xs)
+;;   (string-append (string-join xs "\n") "\n"))
 
-(define/contract (init-api proc name doc req resp)
-  ((dict? . -> . dict?) string? string? string? string?  . -> . api?)
+(define/contract (init-api name doc req resp)
+  (string? string? string? string?  . -> . api?)
   (define-values (method path query heads entity) (split-request req))
   (define rx #rx"{(.+?)}")
   (define path-syms (for/list ([x (in-list (or (regexp-match* rx path) '()))])
@@ -78,12 +82,11 @@
                                    path-re
                                    "\\s+")))
   (define query-dict (string->dict query "&" "="))
-  (define heads-dict (string->dict heads "\n" ":"))
+  (define head-dict (string->dict heads "\n" ":"))
   (define form-dict (string->dict entity "&" "="))
   (define-values (resp-status resp-heads resp-entity) (split-response resp))
-  (define resp-heads-dict (string->dict resp-heads "\n" ":"))
-  (api proc
-       name
+  (define resp-head-dict (string->dict resp-heads "\n" ":"))
+  (api name
        doc
        req
        resp
@@ -91,9 +94,9 @@
        (pregexp path-re)
        path-syms
        query-dict
-       heads-dict
+       head-dict
        form-dict
-       resp-heads-dict
+       resp-head-dict
        ))
 
 (define/contract (split-request req)
@@ -107,7 +110,7 @@
          [(list p q) (values p q)]
          [(list p) (values p "")]
          [(list) (values "" "")]
-         [else (error 'init-api "can't determine path and query")]))
+         [else (error 'split-request "can't determine path and query")]))
      ;; I couldn't figure out the regexp to split h and e in the
      ;; first place, so split them now.
      (define-values (h e)
@@ -115,9 +118,10 @@
          [(list h e) (values h e)]
          [(list h) (values h "")]
          [(list) (values "" "")]
-         [else (error 'init-api "can't determine heads and entity")]))
+         [else (error 'split-request
+                      "can't determine heads and entity:\n~s" h+e)]))
      (values m p q h e)]
-    [else (error 'init-api "can't parse request template")]))  
+    [else (error 'split-request "can't parse request template")]))  
 
 (define/contract (split-response resp)
   (string? . -> . (values string? string? string?))
@@ -218,7 +222,7 @@
   (dict-merge
    (string+api->dict path a)
    (string+dict->dict query (api-query-dict a) "&" "=")
-   (string+dict->dict heads (api-heads-dict a) "\n" ":")
+   (string+dict->dict heads (api-head-dict a) "\n" ":")
    (cond [(regexp-match?
            #px"Content-Type\\s*:\\s*application/x-www-form-urlencoded"
            heads)
@@ -234,12 +238,11 @@
   (api? string? . -> . boolean?)
   (regexp-match? (api-route-px a) r))
 
-(define/contract (try-api? a r)
-  (api? string? . -> . (or/c #f string?))
+(define/contract (try-api? a f r)
+  (api? (dict? . -> . dict?) string? . -> . (or/c #f string?))
   (cond [(request-matches-api? a r)
-         (let* ([proc (api-proc a)]
-                [dict-req (request->dict a r)]
-                [dict-resp (proc dict-req)])
+         (let* ([dict-req (request->dict a r)]
+                [dict-resp (f dict-req)])
            (printf "=== Request matched ~s\nIN==> ~v\n<==OUT ~v\n"
                    (api-name a) dict-req dict-resp)
            (dict->response a dict-resp))]
@@ -247,8 +250,8 @@
 
 (define/contract (dispatch r)
   (string? . -> . string?)
-  (or (for/or ([a (in-list (apis))])
-          (try-api? a r))
+  (or (for/or ([(a f) (in-hash (apis))])
+          (try-api? a f r))
       (404-response)))
 
 (define (404-response)
@@ -266,7 +269,7 @@
 (define/contract (response->dict a s)
   (api? string? . -> . dict?)
   (define-values (status heads entity) (split-response s))
-  (dict-set* (string+dict->dict heads (api-resp-heads-dict a) "\n" ":")
+  (dict-set* (string+dict->dict heads (api-resp-head-dict a) "\n" ":")
              'Status (match status
                        [(pregexp "^HTTP/1\\.\\d{1}\\s+(.+?)$" (list _ x)) x])
              'Entity entity))
@@ -329,9 +332,13 @@
 (define symbol->keyword (compose1 string->keyword symbol->string))
 (define keyword->symbol (compose1 string->symbol keyword->string))
 
+(define (make-api-dict-procedure a)
+  (lambda (d)
+    (dict->request a d)))
+
 ;; Instead of a function that takes a dict, a function that takes
 ;; keyword arguments.
-(define (make-api-keyword-procedure a [strict? #f])
+(define (make-api-keyword-procedure a)
   (define f (make-keyword-procedure
              (lambda (kws vs . rest)
                (dict->request a
@@ -355,3 +362,117 @@
   (define kws (map car xs))
   (define vs (map cdr xs))
   (keyword-apply f kws vs (list)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Markdown parsing
+;;
+;; Note: I suck at parsers. This is ad-hoc, fragile, bad at error-reporting.
+
+;; Pregexp for one section of documentation:
+(define px-api (pregexp (string-append "^"
+                                       "# (.+?)\n+" ;name
+                                       "(.+?)\n+"   ;desc
+                                       "## (?i:Request):\\s*\n+"
+                                       "(.+?)\n*"   ;req
+                                       "## (?i:Response):\\s*\n+"
+                                       "(.+?)\n*"   ;resp
+                                       "$"
+                                       )))
+
+(define/contract (wffi-lib s)
+  (path-string? . -> . (listof api?))
+  (markdown->apis (file->string s)))
+
+(define/contract (markdown->apis s)
+  (string? . -> . (listof api?))
+  (for/list ([x (in-list (get-sections s))])
+    (apply init-api (get-subsections x))))
+
+(define (get-sections s)
+  (let loop ([xs (map car (regexp-match-positions* #rx"(?m:^# .+?\n)" s))])
+    (cond
+     [(empty? xs) (list)]
+     [(empty? (cdr xs)) (cons (substring s (car xs)) (loop (cdr xs)))]
+     [else (cons (substring s (car xs) (cadr xs)) (loop (cdr xs)))])))
+
+(define (get-subsections s)
+  (match s
+    [(pregexp px-api (list _ name desc req resp))
+     (list name desc (clean req) (clean resp))]
+    [else #f]))
+
+(define (kill-leading-spaces s)
+  (string-join (for/list ([s (in-list (regexp-split "\n" s))])
+                 (regexp-replace #px"^\\s+" s ""))
+               "\n"))
+(define (join-query-params s)
+  (regexp-replace* "\n&" s "\\&"))
+
+(define (ensure-double-newline s)
+  (cond [(regexp-match? #px"\n{2}" s) s]
+        [else (string-append s "\n")]))
+
+(define clean
+  (compose1 ensure-double-newline
+            join-query-params
+            kill-leading-spaces
+            ))
+
+(define/contract (get-wffi-obj lib name)
+  ((listof api?) string? . -> . procedure?)
+  (define a (findf (lambda (x) (string=? name (api-name x))) lib))
+  (cond [a (make-api-dict-procedure a)]
+        [else (error 'wffi-define "can't find ~s" name)]))
+
+(define/contract (get-wffi-obj/kw lib name)
+  ((listof api?) string? . -> . procedure?)
+  (define a (findf (lambda (x) (string=? name (api-name x))) lib))
+  (cond [a (make-api-keyword-procedure a)]
+        [else (error 'wffi-define "can't find ~s" name)]))
+
+;;(kill-leading-spaces "\n  adfasdf\n asdfasdfds")
+;;(join-query-params "fooo\n&bar\n&foo")
+;;(ensure-double-newline-ending "adsfadsf\n\nasdfasdf\n")
+
+(define as (markdown->apis (file->string "example.md")))
+;; (define f (make-api-keyword-procedure (first as)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Example using wffi-lib, get-wiff-obj, get-wifi-obj/kw
+#|
+(define lib (wffi-lib "example.md"))
+(define get-example (get-wffi-obj lib "Example GET API"))
+(define get-example/kw (get-wffi-obj/kw lib "Example GET API"))
+
+(get-example (hash
+              'user "greg"
+              'item "12345"
+              'a "A"
+              'b "B" ;try comment this out to catch missing keyword
+              ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
+              'date (seconds->gmt-string)
+              'endpoint "endpoint"
+              'auth "auth"))
+
+(get-example/kw #:user "greg"
+                #:item "1"
+                #:a "a"
+                #:b "b" ;try comment this out to catch missing keyword
+                ;;#:UNDEFINED "undefined" ;try un-comment to catch undef kw
+                #:date (seconds->gmt-string)
+                #:endpoint "endpoint"
+                #:auth "auth")
+
+(apply-dict get-example/kw
+            (hash
+             'user "greg"
+             'item "12345"
+             'a "A"
+             'b "B" ;try comment this out to catch missing keyword
+             ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
+             'date (seconds->gmt-string)
+             'endpoint "endpoint"
+             'auth "auth"))
+|#

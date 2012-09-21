@@ -9,7 +9,7 @@ documentation. In return get:
 
 - Marshaling and routing code to implement it as a server.
 - Marshaling code to use it as a client.
-- Documention generated in formats like markdown and Scribble.
+- Documention in formats like markdown and Scribble.
 
 A "word cloud" of (somewhat) related concepts:
 
@@ -31,12 +31,7 @@ concerns can make it easier to do a better job with each one,
 precisely because they aren't so tightly coupled.
 
 Let's start with documentation for part of a real-world web API, which
-I'm taking almost verbatim from Amazon's documentation for Glacier.
-The [HTML
-version](http://docs.amazonwebservices.com/amazonglacier/latest/dev/api-archive-post.html)
-has some text italicized and in red. Here in plain text, I'm
-highlighting that text using curly braces {}, which in fact is
-actually a popular convention for web API docs:
+I'm taking almost verbatim from Amazon's documentation for Glacier:
 
     -- REQUEST --
 
@@ -50,7 +45,7 @@ actually a popular convention for web API docs:
     x-amz-content-sha256: {SHA256 linear hash}
     Content-Length: {Length}
 
-    -- Response --
+    -- RESPONSE --
 
     HTTP/1.1 201 Created
     x-amzn-RequestId: {x-amzn-RequestId}
@@ -59,7 +54,13 @@ actually a popular convention for web API docs:
     Location: {Location}
     x-amz-archive-id: {ArchiveId}
 
-What this illustrates is that many web service APIs are parameterized
+Amazon's [HTML
+version](http://docs.amazonwebservices.com/amazonglacier/latest/dev/api-archive-post.html)
+uses a red/italic text style for the parameters. Here in plain text,
+I'm marking them using curly braces {}. That's actually a popular
+convention for web documentation.
+
+What this illustrates is that web service APIs are parameterized
 across many parts of the HTTP request:
 
 1. path elements
@@ -68,25 +69,32 @@ across many parts of the HTTP request:
 4. the entity, for `ContentType: application/x-www-form-urlencoded`
 
 Parameters are allocated among some or all of these parts, according
-to convention or just the author's mood.  But essentially there is a
-function with one total set of parameters on entry, and one total set
-of parameters on return.
+to convention or (sometimes it seems) the specifier's previous meal..
+Regardless, there is a function with one total set of parameters on
+entry and one total set of parameters on return.
 
-A "routing" framework for a web service should not make too big a deal
-of these various parts. If it helpfully decodes the path elements, but
-not the other parts of a request, it forces the handler function to
-get in the weeds.  For example, some of the parameters are passed to
-the handler as function arguments ... but others need to be fished out
-of an "all-other" params dictionary. This is ... weird. Also, this
-conceptually binds the function to an HTTP request representation. But
-there are architectures where the web service might be separated from
-the front-end HTTP server by a layer of indirection such as queues, or
-or say a unit-testing controller.
+Some decisions
+--------------
 
-Furthermore, a web service is bi-directional. Marshaling values into a
-handler function is one half. The other is getting values back
-out. The HTTP _response_ also may have outgoing data allocated among
-various parts, such as the status, headers, and entity.
+On the server side (if you're implementing such a service), any
+"routing" framework shouldn't make _too_ big a deal of where in the
+HTTP the interesting data is located (path, query, heads, entity).
+
+Some frameworks decode the path elements and pass them as regular
+function arguments to a handler function, whereas the other inputs
+must be fished out of one or more "params" dictionaries.
+
+This is weird, and it conceptually binds the function to an HTTP
+request representation. But RESTful web services don't have to use
+HTTP. Even when they do, there are architectures where the web service
+might be separated from the front-end HTTP server by a layer of
+indirection (such as queues, or a unit-test harness).
+
+Also, there is both input and output. Marshaling values from a
+_request_ into a handler function is one half. The other is getting
+values back out; the services' HTTP _response_ also may have outgoing
+data allocated among various parts, such as the status, headers, and
+entity.
 
 In Racket a function can return multiple values, but they are not
 named like function arguments are. Returning a struct isn't much
@@ -99,24 +107,48 @@ Well, if the output will be a dict, shouldn't the input, too?
 
 So where this all leads, is:
 
-- The routing DSL for a web service framework should look like the
-  _documentation_ for your web service: A parameterized request, and a
-  parameterized response.
+- Specification for a web service should look like the _documentation_
+  for a web service: A parameterized request, and a parameterized
+  response. In fact, we decide that they will be the same thing: A
+  markdown file of a certain structure.
 
-- In fact your documentation should be _generated_ from this DSL
-  programatically and automatically.
+    ---
+    # API function name
 
-- The handler function should get a `dict` for the request data, and
-  return a `dict` for the response data. Using `dict`s lets the
+    One or more paragraphs of documentation, using full markdown
+    formatting.
+
+    ## Request:
+
+        GET /users/{user}/thing/{id} HTTP/1.1
+        Date: {date}
+
+    ## Response:
+
+        HTTP/1.1 {status}
+        Content-Type: text/plain
+        Content-Length: {len}
+        
+        {body}
+
+    ---
+
+- A server handler function gets a `dict` for the request data, and
+  returns a `dict` for the response data. Using `dict`s lets the
   handler function focus on the _data_, without caring how they're
   marshaled to/from a HTTP represenation. And in fact the data might
   be marshaled into some _other_ representation (like a queue), on its
   way to/from an HTTP representation or non-HTTP representation (like
   a unit test harness).
 
+- It is easy enough in Racket to create (programatically) a wrapper
+  function that takes individual `#keyword` arguments instead of a
+  `dict`. If someone prefers that style, they can use that.
+
 - A DSL that describes parameterized requests and responses is a fine
   way to specify a server implementation --- and also a client
-  implementation. After all, a web client is also prone to spending more effort marshaling than solving its core problem.
+  implementation. After all, a web client is also prone to spending
+  more effort marshaling than solving its core problem.
 
 
 Open questions
