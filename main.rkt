@@ -9,11 +9,11 @@
          
 (provide apis
          (struct-out api)
-         ;; defapi
          dict->request
          request->dict
          dict->response
          response->dict
+         register-api!
          dispatch
          try-api?
          request-matches-api?
@@ -24,6 +24,8 @@
          apply-dict
          wffi-lib
          get-wffi-obj
+         get-wffi-obj/client-dict-proc
+         get-wffi-obj/client-keyword-proc
          )
 
 (struct api
@@ -43,31 +45,11 @@
          resp-head-dict  ;(dict string? symbol)
         ) #:transparent)
 
-(define apis (make-parameter (hash))) ;hashof api? => (dict? -> dict?)
+;; This is only used for implementing a server.
+(define apis (make-parameter (make-hash))) ;hashof api? => (dict? -> dict?)
 (define (register-api! a proc)
-  (hash-set! apis a proc))
+  (hash-set! (apis) a proc))
              
-;; (define-syntax-parameter d
-;;   (lambda (stx)
-;;     (raise-syntax-error #f "d is only bound inside an api handler")))
-;; (provide d)
-
-;; (define-syntax-rule (defapi name title [desc ...] [req ...] [resp ...]
-;;                       body0 body ...)
-;;   (begin
-;;     (define name (init-api (lambda (dict)
-;;                              (splicing-syntax-parameterize
-;;                                  ([d (make-rename-transformer #'dict)])
-;;                                body0 body ...))
-;;                            `title
-;;                            (multi-line `(desc ...))
-;;                            (multi-line `(req ...))
-;;                            (multi-line `(resp ...))))
-;;     (register-api! name)))
-
-;; (define (multi-line xs)
-;;   (string-append (string-join xs "\n") "\n"))
-
 (define/contract (init-api name doc req resp)
   (string? string? string? string?  . -> . api?)
   (define-values (method path query heads entity) (split-request req))
@@ -141,18 +123,26 @@
 (define/contract (k/v-string->dict str sep eq-delim curly-val? f)
   (string? string? string? boolean? (dict? string? string? . -> . dict?)
            . -> . dict?)
-  (define px (pregexp (string-append "^(\\S+?)\\s*"
+  (define px (pregexp (string-append "^"
+                                     "\\[?"
+                                     "(\\S+?)\\s*"
                                      (regexp-quote eq-delim)
                                      "\\s*"
                                      (if curly-val? "\\{" "")
-                                     "(.+?)" ;;"(\\S+?)"
+                                     "(.+?)"
                                      (if curly-val? "\\}" "")
-                                     "[\r\n]*$")))
+                                     "\\]?"
+                                     "[\r\n]*"
+                                     "$")))
   (for/fold ([d '()]) ;use an alist instead of hash; few items
             ([x (in-list (regexp-split (regexp-quote sep) str))])
-      (match (regexp-match px x)
-        [(list _ k v) (f d k v)]
-        [else #|(printf "ignoring ~s from ~s\n" x str)|# d])))
+    (define optional? (match x
+                        [(pregexp "^\\[.+\\]$") #t]
+                        [else #f]))
+    (when optional? (printf "optional: ~s\n" x))
+    (match (regexp-match px x)
+      [(list _ k v) (f d k v)]
+      [else #|(printf "ignoring ~s from ~s\n" x str)|# d])))
 
 (define/contract (string->dict str sep eq-delim)
   (string? string? string? . -> . dict?)
@@ -328,23 +318,41 @@
   (curlies (api-resp a)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; for use by client
+
+(define (do-request a d connect)
+  (define req-str (dict->request a d))
+  (log-debug req-str)
+  (define-values (in out) (connect (dict-ref d 'host)))
+  (display req-str out)
+  (flush-output out)
+  (define resp-str (port->string in))
+  (log-debug resp-str)
+  (begin0
+      (response->dict a resp-str)
+    (close-input-port in)
+    (close-output-port out)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define symbol->keyword (compose1 string->keyword symbol->string))
 (define keyword->symbol (compose1 string->symbol keyword->string))
 
-(define (make-api-dict-procedure a)
+(define (make-api-dict-procedure a connect)
   (lambda (d)
-    (dict->request a d)))
+    (do-request a d connect)))
 
 ;; Instead of a function that takes a dict, a function that takes
 ;; keyword arguments.
-(define (make-api-keyword-procedure a)
+(define (make-api-keyword-procedure a connect)
   (define f (make-keyword-procedure
              (lambda (kws vs . rest)
-               (dict->request a
-                              (map cons
-                                   (map keyword->symbol kws)
-                                   vs)))))
+               (do-request a
+                           (map cons
+                                (map keyword->symbol kws)
+                                vs)
+                           connect))))
   (define kws (map string->keyword
                    (sort (map symbol->string
                               (api-inputs a))
@@ -407,7 +415,7 @@
                  (regexp-replace #px"^\\s+" s ""))
                "\n"))
 (define (join-query-params s)
-  (regexp-replace* "\n&" s "\\&"))
+  (regexp-replace* "\n[?&]" s "\\&"))
 
 (define (ensure-double-newline s)
   (cond [(regexp-match? #px"\n{2}" s) s]
@@ -420,59 +428,26 @@
             ))
 
 (define/contract (get-wffi-obj lib name)
-  ((listof api?) string? . -> . procedure?)
+  ((listof api?) string? . -> . api?)
   (define a (findf (lambda (x) (string=? name (api-name x))) lib))
-  (cond [a (make-api-dict-procedure a)]
+  (cond [a a]
         [else (error 'wffi-define "can't find ~s" name)]))
 
-(define/contract (get-wffi-obj/kw lib name)
-  ((listof api?) string? . -> . procedure?)
-  (define a (findf (lambda (x) (string=? name (api-name x))) lib))
-  (cond [a (make-api-keyword-procedure a)]
-        [else (error 'wffi-define "can't find ~s" name)]))
+(define/contract (get-wffi-obj/client-dict-proc lib name connect)
+  ((listof api?) string? (string? . -> . (values input-port? output-port?))
+   . -> . procedure?)
+  (make-api-dict-procedure (get-wffi-obj lib name) connect))
+
+(define/contract (get-wffi-obj/client-keyword-proc lib name connect)
+  ((listof api?) string? (string? . -> . (values input-port? output-port?))
+   . -> . procedure?)
+  (make-api-keyword-procedure (get-wffi-obj lib name) connect))
 
 ;;(kill-leading-spaces "\n  adfasdf\n asdfasdfds")
 ;;(join-query-params "fooo\n&bar\n&foo")
 ;;(ensure-double-newline-ending "adsfadsf\n\nasdfasdf\n")
 
-(define as (markdown->apis (file->string "example.md")))
+;; (define as (markdown->apis (file->string "example.md")))
+;; as
+
 ;; (define f (make-api-keyword-procedure (first as)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Example using wffi-lib, get-wiff-obj, get-wifi-obj/kw
-#|
-(define lib (wffi-lib "example.md"))
-(define get-example (get-wffi-obj lib "Example GET API"))
-(define get-example/kw (get-wffi-obj/kw lib "Example GET API"))
-
-(get-example (hash
-              'user "greg"
-              'item "12345"
-              'a "A"
-              'b "B" ;try comment this out to catch missing keyword
-              ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
-              'date (seconds->gmt-string)
-              'endpoint "endpoint"
-              'auth "auth"))
-
-(get-example/kw #:user "greg"
-                #:item "1"
-                #:a "a"
-                #:b "b" ;try comment this out to catch missing keyword
-                ;;#:UNDEFINED "undefined" ;try un-comment to catch undef kw
-                #:date (seconds->gmt-string)
-                #:endpoint "endpoint"
-                #:auth "auth")
-
-(apply-dict get-example/kw
-            (hash
-             'user "greg"
-             'item "12345"
-             'a "A"
-             'b "B" ;try comment this out to catch missing keyword
-             ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
-             'date (seconds->gmt-string)
-             'endpoint "endpoint"
-             'auth "auth"))
-|#
