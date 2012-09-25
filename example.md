@@ -11,7 +11,7 @@ and they must be named exactly "Request:" and "Response:".
 
 ## Request:
 
-    GET /user/{user}/items/{item}?a={a}&b={b} HTTP/1.1
+    GET /user/{user}/items/{item}?a={a}&[b={b}] HTTP/1.1
     Host: {endpoint}
     Authorization: {auth}
     Date: {date}
@@ -43,9 +43,8 @@ This is an example of a `POST` request API.
 
     HTTP/1.1 {Status}
     Date: {date}
+    
 
-    {body}
- 
 # Create Domain
 
 The CreateDomain operation creates a new domain. The domain name must
@@ -65,11 +64,13 @@ http://aws.amazon.com/contact-us/simpledb-limit-request/.
 
 ## Request:
 
-    POST https://sdb.amazonaws.com/?Action=CreateDomain
+    POST https://sdb.amazonaws.com/
+      ?Action=CreateDomain
       &AWSAccessKeyId={public-key}
       &DomainName={domain}
       &SignatureVersion=2
-      &SignatureMethod=HmacSHA256&Timestamp={timestamp}
+      &SignatureMethod=HmacSHA256
+      &Timestamp={timestamp}
       &Version=2009-04-15
       &Signature={sig}
     Date: {date}
