@@ -451,3 +451,57 @@
 ;; as
 
 ;; (define f (make-api-keyword-procedure (first as)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; As sexprs.
+;;
+;; Perhaps parse the markdown text into this intermediate
+;; respresentation of teh grammar?
+
+#|
+
+<request>  ::= (<method> (<path>) (<query>) (<head>) (<body>))
+<response> ::= (<status> <head> <body>)
+
+<method>   ::= 'get | 'put | 'post | 'delete
+
+<path>     ::= string?
+            |  symbol?
+
+<query>    ::= <map>
+<head>     ::= <map>
+<body>     ::= <map>
+
+<map>      ::= symbol?
+            |  (symbol? any/c)    ;; Default value
+
+---
+
+
+|#
+
+`(post ("https://sdb.amazonaws.com/")
+       ([Action "CreateDomain"]
+        AWSAccessKeyId
+        DomainName
+        [SignatureVersion 2]
+        [SignatureMethod "HmacSHA256"]
+        Timestamp
+        [Version "2009-04-15"]
+        Signature)
+       ()
+       ())
+
+`(get ("/user/" 'user "/items/" 'item)
+      ()
+      (Host Authorization)
+      ())
+
+`(post ("/user/" 'user "/items/")
+       ()
+       (Host
+        Authorization
+        [Content-Type "application/x-www-form-urlencoded"]
+        Content-Length)
+       (a b))
