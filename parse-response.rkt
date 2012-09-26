@@ -22,6 +22,7 @@
    ;; [#\] 'CLOSE-BRACKET]
    [#\? 'QUESTION]
    [#\& 'AMPERSAND]
+   ;; A double newline marks the start of the entity
    [(:: (:or (:: #\newline #\newline)
              (:: #\return #\return)
              (:: #\return #\newline #\return #\newline))
@@ -84,39 +85,25 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     ;; We won't get a CRLF token for the final head because the lexer
     ;; will consume that into the ENTITY token.
-    (head [(ID COLON CRLF) (cons $1 "")] ;ending in CRLF
-          [(ID COLON WS CRLF) (cons $1 "")]
-          [(ID COLON WS ID CRLF) (cons $1 $4)]
-          [(ID COLON WS ID WS CRLF) (cons $1 $4)]
-          [(ID COLON) (cons $1 "")] ;NOT ending in CRLF
-          [(ID COLON WS) (cons $1 "")]
-          [(ID COLON WS ID) (cons $1 $4)]
-          [(ID COLON WS ID WS) (cons $1 $4)])
+    (head [(ID COLON CRLF) (cons-sym $1 "")] ;ending in CRLF
+          [(ID COLON WS CRLF) (cons-sym $1 "")]
+          [(ID COLON WS ID CRLF) (cons-sym $1 $4)]
+          [(ID COLON WS ID WS CRLF) (cons-sym $1 $4)]
+          [(ID COLON) (cons-sym $1 "")] ;NOT ending in CRLF
+          [(ID COLON WS) (cons-sym $1 "")]
+          [(ID COLON WS ID) (cons-sym $1 $4)]
+          [(ID COLON WS ID WS) (cons-sym $1 $4)])
 
     (body [(ENTITY) (substring $1 2)])
-
-    ;; (body [(body-list) (apply string-append (reverse $1))])
-
-    ;; (body-token [(ID) $1]
-    ;;             [(WS) $1]
-    ;;             [(CRLF) $1]
-    ;;             [(EQ) "="]
-    ;;             [(COLON) ":"]
-    ;;             ;; [(OPEN-BRACE) "{"]
-    ;;             ;; [(CLOSE-BRACE) "}"]
-    ;;             ;; [(OPEN-BRACKET) "["]
-    ;;             ;; [(CLOSE-BRACKET) "]"]
-    ;;             [(QUESTION) "?"]
-    ;;             [(AMPERSAND) "&"])
-
-    ;; (body-list [() '()]
-    ;;            [(body-list body-token) (cons $2 $1)])
 
     ;; (val-pair
     ;;  [(ID EQ ID) (list "default" $1 $3)]
     ;;  [(ID EQ OPEN-BRACE ID CLOSE-BRACE) (list "normal" $1 $4)]
     ;;  [(OPEN-BRACKET ID EQ OPEN-BRACE ID CLOSE-BRACE) (list "opt" $2 $5)])
     )))
+
+(define (cons-sym k v)
+  (cons (string->symbol k) v))
 
 (define (lex-this lexer input) (lambda () (lexer input)))
 (let ([in (open-input-string str)])
