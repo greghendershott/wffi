@@ -5,21 +5,21 @@
          parser-tools/yacc
          )
 
-(define-tokens A (ID WS CRLF ENTITY))
-(define-empty-tokens B (EQ COLON
-                        ;; OPEN-BRACE CLOSE-BRACE
-                        ;; OPEN-BRACKET CLOSE-BRACKET
-                        QUESTION AMPERSAND
-                        EOF))
+(define-tokens data (DATUM WS CRLF ENTITY))
+(define-empty-tokens delims (EQ COLON
+                                OPEN-BRACE CLOSE-BRACE
+                                OPEN-BRACKET CLOSE-BRACKET
+                                QUESTION AMPERSAND
+                                EOF))
 
 (define response-lexer
-  (lexer
+  (lexer-src-pos
    [#\= 'EQ]
    [#\: 'COLON]
-   ;; [#\{ 'OPEN-BRACE]
-   ;; [#\} 'CLOSE-BRACE]
-   ;; [#\[ 'OPEN-BRACKET]
-   ;; [#\] 'CLOSE-BRACKET]
+   [#\{ 'OPEN-BRACE]
+   [#\} 'CLOSE-BRACE]
+   [#\[ 'OPEN-BRACKET]
+   [#\] 'CLOSE-BRACKET]
    [#\? 'QUESTION]
    [#\& 'AMPERSAND]
    ;; A double newline marks the start of the entity
@@ -32,8 +32,12 @@
    [whitespace (token-WS lexeme)]
    ;; In the following, it seems necessary to duplicate the list above in
    ;; a ~ expression. Really???
-   [(:+ (:~ (:or #\= #\: #\{ #\} #\[ #\] #\? #\& whitespace)))
-    (token-ID lexeme)]
+   [(:+ (:~ (:or #\= #\:
+                 #\{ #\}
+                 #\[ #\]
+                 #\? #\&
+                 whitespace)))
+    (token-DATUM lexeme)]
    [(eof) 'EOF]
    ))
 
@@ -55,27 +59,38 @@ Notice that tokens like :, &, ? are treated as normal chars here.
   (parser
    (start response)
    (end EOF)
-   (error (lambda (tok-ok? tok-name tok-value)
-            (error 'response-parser
-                   "tok-ok?= ~a. ~a is ~a"
-                   tok-ok? tok-name tok-value)))
-   (tokens A B)
-   ;;(precs (left))
+   (src-pos)
+   (error (lambda (tok-ok? tok-name tok-value start end)
+            (error 'request-parser
+                   "tok-ok?= ~a. ~a is ~a at ~a:~a"
+                   tok-ok? tok-name tok-value
+                   (position-line start)
+                   (position-col start))))   
+   (tokens data delims)
    
    (grammar
 
+    (value [(variable) $1]
+           [(constant) $1])
+
+    (variable [(OPEN-BRACE DATUM CLOSE-BRACE)
+               (list 'VARIABLE (string->symbol $2))]
+              [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
+
+    (constant [(DATUM) (list 'CONSTANT $1)])
+    
     (response [(start-line heads body)
               (list $1 $2 $3)])
 
     (start-line [(http-ver WS code CRLF) (list $1 $3 "")]
                 [(http-ver WS code WS desc CRLF) (list $1 $3 $5)])
     
-    (http-ver [(ID) $1])
+    (http-ver [(DATUM) $1])
 
-    (code [(ID) $1])
+    (code [(DATUM) $1])
 
     (desc [(desc-list) (apply string-append (reverse $1))])
-    (desc-token [(ID) $1]
+    (desc-token [(DATUM) $1]
                 [(WS) $1])
     (desc-list [() '()]
                [(desc-list desc-token) (cons $2 $1)])
@@ -85,21 +100,29 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     ;; We won't get a CRLF token for the final head because the lexer
     ;; will consume that into the ENTITY token.
-    (head [(ID COLON CRLF) (cons-sym $1 "")] ;ending in CRLF
-          [(ID COLON WS CRLF) (cons-sym $1 "")]
-          [(ID COLON WS ID CRLF) (cons-sym $1 $4)]
-          [(ID COLON WS ID WS CRLF) (cons-sym $1 $4)]
-          [(ID COLON) (cons-sym $1 "")] ;NOT ending in CRLF
-          [(ID COLON WS) (cons-sym $1 "")]
-          [(ID COLON WS ID) (cons-sym $1 $4)]
-          [(ID COLON WS ID WS) (cons-sym $1 $4)])
+    (head [(DATUM COLON)
+           (list (string->symbol $1) (list 'CONSTANT ""))]
+          [(DATUM COLON WS head-value)
+           (list (string->symbol $1) (list 'CONSTANT $4))]
+          [(DATUM COLON WS variable)
+           (match $4
+             [(list 'VARIABLE)
+              (list (string->symbol $1)
+                    (list 'VARIABLE (string->symbol $1)))]
+             [else (list (string->symbol $1) $4)])]
+          [(head WS) $1]
+          [(head CRLF) $1]
+          [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
+
+    ;; Constant header values may contain spaces
+    (head-value [(head-value-list) (apply string-append (reverse $1))])
+    (head-value-token [(DATUM) $1]
+                      [(WS) $1])
+    (head-value-list [() '()]
+                     [(head-value-list head-value-token) (cons $2 $1)])
 
     (body [(ENTITY) (substring $1 2)])
 
-    ;; (val-pair
-    ;;  [(ID EQ ID) (list "default" $1 $3)]
-    ;;  [(ID EQ OPEN-BRACE ID CLOSE-BRACE) (list "normal" $1 $4)]
-    ;;  [(OPEN-BRACKET ID EQ OPEN-BRACE ID CLOSE-BRACE) (list "opt" $2 $5)])
     )))
 
 (define (cons-sym k v)
@@ -110,7 +133,8 @@ Notice that tokens like :, &, ? are treated as normal chars here.
   (displayln "LEXER============")
   (define f (lex-this response-lexer in))
   (let loop ()
-    (define t (f))
+    (define pt (f))
+    (define t (position-token-token pt))
     (pretty-print t)
     (unless (eq? t 'EOF)
       (loop))))
