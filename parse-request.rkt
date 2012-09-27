@@ -135,6 +135,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; example
 
+#;
 (define str #<<--
 GET /users/{user}/items/{item}?a={}&[b=2] HTTP/1.1
 Date: {}
@@ -165,6 +166,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (unless (eq? 'EOF t)
       (loop))))
 
+#;
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
   (port-count-lines! in)

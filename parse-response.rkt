@@ -120,6 +120,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; example
 
+#;
 (define str #<<--
 HTTP/1.1 404 Not Found
 Date: Today
@@ -147,6 +148,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (unless (eq? t 'EOF)
       (loop))))
 
+#;
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
   (template-response-parser (lambda () (template-response-lexer in))))

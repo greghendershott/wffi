@@ -6,6 +6,8 @@
          "parse-response.rkt"
          )
 
+(provide markdown->apis)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (sections s)
@@ -15,7 +17,7 @@
      [(empty? (cdr xs)) (cons (substring s (car xs)) (loop (cdr xs)))]
      [else (cons (substring s (car xs) (cadr xs)) (loop (cdr xs)))])))
 
-;; Pregexp for one section of documentation:
+;; Pregexp for one section of a markdown file documenting one API.
 (define px-api (pregexp (string-append "^"
                                        "# (.+?)\n+" ;name
                                        "(.+?)\n+"   ;desc
@@ -70,8 +72,8 @@
                   (parse-template-response resp))
     (init-api name doc req-method req-path req-query req-head resp-head)))
 
-;; test
-(define as (markdown->apis (file->string "example.md")))
+;; ;; test
+;; (define as (markdown->apis (file->string "example.md")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
@@ -111,40 +113,3 @@
 ;; (define/contract (api->scribble x)
 ;;   (api? . -> . string?)
 ;;   "")                                   ;TO-DO
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; ;; `f' is called so that it may add some values to the dict (they
-;; ;; don't need to be the original values passed to it) and return the
-;; ;; new dict. If it doesn't want to add any values at all, it can
-;; ;; simply return the original dict.
-;; (define/contract (k/v-string->dict str sep eq-delim curly-val? f)
-;;   (string? string? string? boolean? (dict? string? string? . -> . dict?)
-;;            . -> . dict?)
-;;   (define px (pregexp (string-append "^"
-;;                                      "\\[?"
-;;                                      "(\\S+?)\\s*"
-;;                                      (regexp-quote eq-delim)
-;;                                      "\\s*"
-;;                                      (if curly-val? "\\{" "")
-;;                                      "(.+?)"
-;;                                      (if curly-val? "\\}" "")
-;;                                      "\\]?"
-;;                                      "[\r\n]*"
-;;                                      "$")))
-;;   (for/fold ([d '()]) ;use an alist instead of hash; few items
-;;             ([x (in-list (regexp-split (regexp-quote sep) str))])
-;;     (define optional? (match x
-;;                         [(pregexp "^\\[.+\\]$") #t]
-;;                         [else #f]))
-;;     (when optional? (printf "optional: ~s\n" x))
-;;     (match (regexp-match px x)
-;;       [(list _ k v) (f d k v)]
-;;       [else #|(printf "ignoring ~s from ~s\n" x str)|# d])))
-
-;; (define/contract (string->dict str sep eq-delim)
-;;   (string? string? string? . -> . dict?)
-;;   (k/v-string->dict str sep eq-delim #t
-;;                     (lambda (d k v)
-;;                       (dict-set d k (string->symbol v)))))
-

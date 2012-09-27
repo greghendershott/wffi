@@ -2,7 +2,8 @@
 
 (require net/uri-codec
          "api.rkt"
-         "grammar.rkt"
+         ;;"grammar.rkt"
+         "markdown.rkt"
          "split.rkt"
          "dict-merge.rkt")
          
@@ -16,17 +17,28 @@
 
 (define (dict->request a d)
   ;; (api? dict? . -> . string?)
-  (define-values (m p q h b) (request-parts (api-req a)))
-  (define path (string-join (for/list ([x p])
-                              (cond [(string? x) x]
-                                    [(symbol? x) (dict-ref d x)]
-                                    [else (error 'dict->request)]))
-                            ""))
-  (define query (alist->form-urlencoded
-                 (for/list ([x q])
+  (define (to-cons x)
+    (match x
+      [(list k (list 'CONSTANT v)) (cons k v)]
+      [(list k (list 'VARIABLE v)) (cons k (format "~a" (dict-ref d v)))]
+      [(list 'OPTIONAL (list k (list 'VARIABLE v)))
+       (cond [(dict-has-key? d v) (cons k (format "~a" (dict-ref d v)))]
+             [else #f])]
+      [(list 'OPTIONAL (list k (list 'CONSTANT v)))
+       (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
+             [else (cons k v)])]
+      [else (error 'dict->request "~v" x)]))
+  (match-define (api _ _ _ m p q h _) a)
+  (define path
+    (string-join (for/list ([x p])
                    (match x
-                     [(list k v) (cons k (format "~a" (dict-ref d k v)))]
-                     [(var k) (cons k (format "~a" (dict-ref d x)))]))))
+                     [(? string? s) s]
+                     [(list 'VARIABLE k) (format "~a" (dict-ref d k))]
+                     [else (error 'dict->request)]))
+                 ""))
+  (define query
+    (alist->form-urlencoded (filter values (for/list ([x q])
+                                             (to-cons x)))))
   (define method+path+query
     (string-append (string-upcase (symbol->string m))
                    " "
@@ -34,36 +46,27 @@
                    (cond [(string=? "" query) ""]
                          [else (string-append "?" query)])))
   (define head
-    (for/list ([x h])
-      (match x
-        [(list k v) (cons k (format "~a" (dict-ref d k v)))]
-        [(var k) (cons k (format "~a" (dict-ref d x)))])))
-  (define body (alist->form-urlencoded
-                (for/list ([x b])
-                  (match x
-                    [(list k v) (cons k (format "~a" (dict-ref d k v)))]
-                    [(var k) (cons k (format "~a" (dict-ref d x)))]))))
-  (values method+path+query head body))
+    (filter values (for/list ([x h])
+                     (to-cons x))))
+  ;; (define body (alist->form-urlencoded
+  ;;               (for/list ([x b])
+  ;;                 (match x
+  ;;                   [(list k v) (cons k (format "~a" (dict-ref d k v)))]
+  ;;                   [(var k) (cons k (format "~a" (dict-ref d x)))]))))
+  (values method+path+query head))
 
-(define ex
-  (api-grammar->api-struct
-   '("Example POST API"
-     "doc string"
-     (post ("/user/" user "/items/")
-           (qa qb)
-           (Authorization
-            [Content-Type "application/x-www-form-urlencoded"]
-            Content-Length)
-           (a b))
-     (() () ()))))
-
+(define ex (first (markdown->apis (file->string "example.md"))))
 (dict->request ex (hash 'user "Greg"
+                        'item 1
                         'qa "qa"
                         'qb "qb"
                         'Host "foobar.com"
                         'Authorization "blah"
-                        ;'Content-Type "OVERRIDE DEFAULT!!!"
+                        'Date "today"
+                        'alias "foo"
                         'Content-Length 10
+                        'Optional-Var 999
+                        'Optional-Const 1
                         'a "a"
                         'b "b"))
 
@@ -89,6 +92,7 @@
                       (values (string->symbol k) v)]))]
          [else (hash)])))
 
+#;
 (response->dict ex
                 #<<--
 HTTP/1.1 200 OK
@@ -113,22 +117,23 @@ a=1&b=2
 
 (define/contract (api-inputs a)
   (api? . -> . (listof symbol?))
-  (define-values (m p q h b) (request-parts (api-req a)))
+  (error 'todo)
+  (match-define (api _ _ _ m p q h _) a)
   (sort (append (for/list ([x p]
                            #:when (symbol? x))
                   x)
                 (syms q)
                 (syms h)
-                (syms b))
+                #;(syms b))
         symbol<=?))
 
 ;;(api-inputs ex)
 
 (define (api-outputs a)
-  (define-values (s h b) (response-parts (api-resp a)))
-  (sort (append (syms s)
+  (match-define (api _ _ _ _ _ _ _ h) a)
+  (sort (append #;(syms s)
                 (syms h)
-                (syms b))
+                #;(syms b))
         symbol<=?))
 
 ;;(api-outputs ex)
