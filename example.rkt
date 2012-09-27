@@ -1,6 +1,8 @@
 #lang racket
 
-(require wffi)
+(require wffi
+         wffi/client
+         )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; For testing, some requests
@@ -95,7 +97,7 @@ asdfasdfasdf
 ;; Making requests as a client.
 ;; Example using wffi-lib, get-wiff-obj, get-wifi-obj/kw.
 
-#|
+
 (require (planet gh/http))
 (define lib (wffi-lib "example.md"))
 (define get-example (get-wffi-obj/client-dict-proc lib "Example GET API"))
@@ -130,4 +132,3 @@ asdfasdfasdf
              'date (seconds->gmt-string)
              'endpoint "endpoint"
              'auth "auth"))
-|#
