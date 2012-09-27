@@ -5,6 +5,8 @@
          parser-tools/yacc
          )
 
+(provide parse-template-response)
+
 (define-tokens data (DATUM WS CRLF ENTITY))
 (define-empty-tokens delims (EQ COLON
                                 OPEN-BRACE CLOSE-BRACE
@@ -12,7 +14,7 @@
                                 QUESTION AMPERSAND
                                 EOF))
 
-(define response-lexer
+(define template-response-lexer
   (lexer-src-pos
    [#\= 'EQ]
    [#\: 'COLON]
@@ -41,21 +43,7 @@
    [(eof) 'EOF]
    ))
 
-(define str #<<--
-HTTP/1.1 404 Not Found
-Date: Today
-EmptyHeader:
-ValueWithTrailingWhitespace: SpaceBeforeLF-> 
-Foo: Bar
-
-This is the body line 1.
-Here is line 2.
-Notice that tokens like :, &, ? are treated as normal chars here.
-
---
-)
-
-(define response-parser
+(define template-response-parser
   (parser
    (start response)
    (end EOF)
@@ -73,14 +61,14 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (value [(variable) $1]
            [(constant) $1])
 
-    (variable [(OPEN-BRACE DATUM CLOSE-BRACE)
-               (list 'VARIABLE (string->symbol $2))]
-              [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
+    (variable
+     [(OPEN-BRACE DATUM CLOSE-BRACE) (list 'VARIABLE (string->symbol $2))]
+     [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
 
     (constant [(DATUM) (list 'CONSTANT $1)])
     
-    (response [(start-line heads body)
-              (list $1 $2 $3)])
+    (response [(start-line heads body) (list $1 $2 $3)]
+              [(start-line heads) (list $1 $2 '())])
 
     (start-line [(http-ver WS code CRLF) (list $1 $3 "")]
                 [(http-ver WS code WS desc CRLF) (list $1 $3 $5)])
@@ -100,19 +88,13 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     ;; We won't get a CRLF token for the final head because the lexer
     ;; will consume that into the ENTITY token.
-    (head [(DATUM COLON)
-           (list (string->symbol $1) (list 'CONSTANT ""))]
-          [(DATUM COLON WS head-value)
-           (list (string->symbol $1) (list 'CONSTANT $4))]
-          [(DATUM COLON WS variable)
-           (match $4
-             [(list 'VARIABLE)
-              (list (string->symbol $1)
-                    (list 'VARIABLE (string->symbol $1)))]
-             [else (list (string->symbol $1) $4)])]
-          [(head WS) $1]
-          [(head CRLF) $1]
-          [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
+    (head
+     [(DATUM COLON) (list (string->symbol $1) (list 'CONSTANT ""))]
+     [(DATUM COLON WS head-value) (list (string->symbol $1) (list 'CONSTANT $4))]
+     [(DATUM COLON WS variable) (var-name $1 $4)]
+     [(head WS) $1]
+     [(head CRLF) $1]
+     [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
 
     ;; Constant header values may contain spaces
     (head-value [(head-value-list) (apply string-append (reverse $1))])
@@ -125,13 +107,39 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     )))
 
-(define (cons-sym k v)
-  (cons (string->symbol k) v))
+(define (var-name datum value)
+  (list (string->symbol datum) (match value
+                                 [(list 'VARIABLE)
+                                  (list 'VARIABLE (string->symbol datum))]
+                                 [else value])))
 
-(define (lex-this lexer input) (lambda () (lexer input)))
+(define (parse-template-response s)
+  (define in (open-input-string s))
+  (template-response-parser (lambda () (template-response-lexer in))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; example
+
+(define str #<<--
+HTTP/1.1 404 Not Found
+Date: Today
+EmptyHeader:
+Header1: {}
+Header2: {Alias}
+ValueWithTrailingWhitespace: SpaceBeforeLF-> 
+Foo: Bar
+
+This is the body line 1.
+Here is line 2.
+Notice that tokens like :, &, ? are treated as normal chars here.
+
+--
+)
+
+#;
 (let ([in (open-input-string str)])
   (displayln "LEXER============")
-  (define f (lex-this response-lexer in))
+  (define f (lambda () (template-response-lexer in)))
   (let loop ()
     (define pt (f))
     (define t (position-token-token pt))
@@ -141,5 +149,4 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
-  (response-parser (lex-this response-lexer in)))
-
+  (template-response-parser (lambda () (template-response-lexer in))))

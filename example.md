@@ -9,21 +9,25 @@ It is OK to include subsections for the documentation.
 The following subsections are special. They must be level two ("##")
 and they must be named exactly "Request:" and "Response:".
 
+The request grammar allows you to omit some parts:
+
+- You may omit the HTTP/1.0 or HTTP/1.1 ending on the request start line.
+
+- You do not need to specify any body.
+
 ## Request:
 
-    GET /user/{user}/items/{item}?a={a}&[b={b}] HTTP/1.1
-    Host: {endpoint}
-    Authorization: {auth}
-    Date: {date}
+    GET /user/{user}/items/{item}?a={a}&b={b} HTTP/1.1
+    Host: {}
+    Authorization: {}
+    Date: {}
 
 ## Response:
 
-    HTTP/1.1 {Status}
-    Date: {date}
+    HTTP/1.1 200 OK
+    Date: {}
     Content-Type: {type}
     Content-Length: {len}
-    
-    {body}
 
 # Example POST API
 
@@ -36,14 +40,15 @@ This is an example of a `POST` request API.
     Authorization: {auth}
     Content-Type: application/x-www-form-urlencoded
     Content-Length: {len}
-
+    
     a={a}&b={b}
     
 ## Response:
 
-    HTTP/1.1 {Status}
+    HTTP/1.1 200 OK
     Date: {date}
     
+    {body}
 
 # Create Domain
 
@@ -64,7 +69,7 @@ http://aws.amazon.com/contact-us/simpledb-limit-request/.
 
 ## Request:
 
-    POST https://sdb.amazonaws.com/
+    POST /
       ?Action=CreateDomain
       &AWSAccessKeyId={public-key}
       &DomainName={domain}
@@ -72,13 +77,10 @@ http://aws.amazon.com/contact-us/simpledb-limit-request/.
       &SignatureMethod=HmacSHA256
       &Timestamp={timestamp}
       &Version=2009-04-15
-      &Signature={sig}
-    Date: {date}
+      &Signature={}
+    Date: {}
 
 ## Response:
 
     HTTP 201 Created
     Date: {date}
-    
-    {body}
-

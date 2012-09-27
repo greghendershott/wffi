@@ -3,8 +3,9 @@
 (require parser-tools/lex
          (prefix-in : parser-tools/lex-sre)
          parser-tools/yacc
-         syntax/readerr
          )
+
+(provide parse-template-request)
 
 (define-tokens data (DATUM WS CRLF ENTITY))
 (define-empty-tokens delim (EQ COLON
@@ -13,7 +14,7 @@
                                QUESTION AMPERSAND
                                EOF))
 
-(define request-lexer
+(define template-request-lexer
   (lexer-src-pos
    [#\= 'EQ]
    [#\: 'COLON]
@@ -42,32 +43,13 @@
    [(eof) 'EOF]
    ))
 
-(define str #<<--
-GET /users/{user}/items/{item}?a={}&[b=2] HTTP/1.1
-Date: {}
-Header: Constant value with whitespace
-Authorization: {}
-Alias: {optional-alias}
-[OptionalLiteral: default]
-[OptionalVariable: {}]
-EmptyHeader:
-ValueWithTrailingWhitespace: SpaceBeforeLF-> 
-Foo: Bar
-
-This is the body line 1.
-Here is line 2.
-Notice that tokens like :, &, ? are treated as normal chars here.
-
---
-)
-
-(define request-parser
+(define template-request-parser
   (parser
    (start request)
    (end EOF)
    (src-pos)
    (error (lambda (tok-ok? tok-name tok-value start end)
-            (error 'request-parser
+            (error 'template-request-parser
                    "tok-ok?= ~a. ~a is ~a at ~a:~a"
                    tok-ok? tok-name tok-value
                    (position-line start)
@@ -79,19 +61,20 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (value [(variable) $1]
            [(constant) $1])
 
-    (variable [(OPEN-BRACE DATUM CLOSE-BRACE)
-               (list 'VARIABLE (string->symbol $2))]
-              [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
+    (variable
+     [(OPEN-BRACE DATUM CLOSE-BRACE) (list 'VARIABLE (string->symbol $2))]
+     [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
 
     (constant [(DATUM) (list 'CONSTANT $1)])
     
-    (request [(start-line heads body)
-              (list $1 $2 $3)])
+    (request [(start-line heads body) (list $1 $2 $3)]
+             [(start-line heads) (list $1 $2 '())])
 
-    (start-line [(method WS path+query WS http-ver CRLF)
-                 (list $1 $3 $5)])
+    (start-line
+     [(method WS path+query WS http-ver CRLF) (list $1 $3 $5)]
+     [(method WS path+query CRLF) (list $1 $3 "HTTP/1.0")])
     
-    (method [(DATUM) $1])
+    (method [(DATUM) (string->symbol $1)])
 
     (path+query [(path) (list $1 '())]
                 [(path QUESTION queries) (cons $1 (list $3))])
@@ -110,12 +93,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (queries [() null]
              [(queries query) (cons $2 $1)])
 
-    (query [(DATUM EQ value)
-            (list (string->symbol $1)
-                  (match $3
-                    [(list 'VARIABLE)
-                     (list 'VARIABLE (string->symbol $1))]
-                    [else $3]))]
+    (query [(DATUM EQ value) (var-name $1 $3)]
            [(AMPERSAND query) $2]
            [(OPEN-BRACKET query CLOSE-BRACKET) (list 'OPTIONAL $2)])
 
@@ -124,19 +102,13 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     ;; We won't get a CRLF token for the final head because the lexer
     ;; will consume that into the ENTITY token.
-    (head [(DATUM COLON)
-           (list (string->symbol $1) (list 'CONSTANT ""))]
-          [(DATUM COLON WS head-value)
-           (list (string->symbol $1) (list 'CONSTANT $4))]
-          [(DATUM COLON WS variable)
-           (match $4
-             [(list 'VARIABLE)
-              (list (string->symbol $1)
-                    (list 'VARIABLE (string->symbol $1)))]
-             [else (list (string->symbol $1) $4)])]
-          [(head WS) $1]
-          [(head CRLF) $1]
-          [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
+    (head
+     [(DATUM COLON) (list (string->symbol $1) (list 'CONSTANT ""))]
+     [(DATUM COLON WS head-value) (list (string->symbol $1) (list 'CONSTANT $4))]
+     [(DATUM COLON WS variable) (var-name $1 $4)]
+     [(head WS) $1]
+     [(head CRLF) $1]
+     [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
 
     ;; Constant header values may contain spaces
     (head-value [(head-value-list) (apply string-append (reverse $1))])
@@ -149,11 +121,43 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 
     )))
 
-(define (lex-this lexer input) (lambda () (lexer input)))
+(define (var-name datum value)
+  (list (string->symbol datum) (match value
+                                 [(list 'VARIABLE)
+                                  (list 'VARIABLE (string->symbol datum))]
+                                 [else value])))
 
+(define (parse-template-request s)
+  (define in (open-input-string s))
+  (port-count-lines! in)
+  (template-request-parser (lambda () (template-request-lexer in))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; example
+
+(define str #<<--
+GET /users/{user}/items/{item}?a={}&[b=2] HTTP/1.1
+Date: {}
+Header: Constant value with whitespace
+Authorization: {}
+Aliased: {optional-alias}
+[OptLit: default value]
+[OptVar: {}]
+EmptyHeader:
+ValueWithTrailingWhitespace: SpaceBeforeLF-> 
+Foo: Bar
+
+This is the body line 1.
+Here is line 2.
+Notice that tokens like :, &, ? are treated as normal chars here.
+
+--
+)
+
+#;
 (let ([in (open-input-string str)])
   (displayln "LEXER============")
-  (define f (lex-this request-lexer in))
+  (define f (lambda () (template-request-lexer in)))
   (let loop ()
     (define pt (f))
     (define t (position-token-token pt))
@@ -164,5 +168,5 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
   (port-count-lines! in)
-  (request-parser (lex-this request-lexer in)))
+  (template-request-parser (lambda () (template-request-lexer in))))
 
