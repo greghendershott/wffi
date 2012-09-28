@@ -28,8 +28,14 @@
      (values m p q h e)]
     [else (error 'split-request "can't parse request template")]))  
 
+(define px (pregexp (string-append
+                     "^"
+                     "(.+?)" "(?:\r\n|\r|\n)"
+                     "(.+?)" "(?:\r\n\r\n|\r\r|\n\n)"
+                     "(.*?)"
+                     "$")))
 (define/contract (split-response resp)
   (string? . -> . (values string? string? string?))
-  (match resp
-    [(pregexp "^(.+?)\n(.*)\n\n(.*)$" (list _ s h e)) (values s h e)]
+  (match (regexp-match px resp)
+    [(list _ s h e) (values s h e)]
     [else (error 'split-response "can't determine heads and entity ~s" resp)]))

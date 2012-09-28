@@ -1,6 +1,8 @@
 #lang racket
 
 (require net/uri-codec
+         (planet gh/http/request)
+         (planet gh/http/head)
          "api.rkt"
          ;;"grammar.rkt"
          "markdown.rkt"
@@ -8,6 +10,7 @@
          "dict-merge.rkt")
          
 (provide make-api-keyword-procedure
+         api-inputs
          apply-dict
          wffi-lib
          get-wffi-obj
@@ -15,8 +18,8 @@
          get-wffi-obj/client-keyword-proc
          )
 
-(define (dict->request a d)
-  ;; (api? dict? . -> . string?)
+(define/contract (dict->request a d)
+  (api? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
       [(list k (list 'CONSTANT v)) (cons k v)]
@@ -39,23 +42,23 @@
   (define query
     (alist->form-urlencoded (filter values (for/list ([x q])
                                              (to-cons x)))))
-  (define method+path+query
-    (string-append (string-upcase (symbol->string m))
-                   " "
-                   path
+  (define method (string-upcase (symbol->string m)))
+  (define path+query
+    (string-append path
                    (cond [(string=? "" query) ""]
                          [else (string-append "?" query)])))
-  (define head
-    (filter values (for/list ([x h])
-                     (to-cons x))))
+  (define heads (filter values (for/list ([x h])
+                                 (to-cons x))))
   ;; (define body (alist->form-urlencoded
   ;;               (for/list ([x b])
   ;;                 (match x
   ;;                   [(list k v) (cons k (format "~a" (dict-ref d k v)))]
   ;;                   [(var k) (cons k (format "~a" (dict-ref d x)))]))))
-  (values method+path+query head))
+  (values method path+query heads #f))
+
 
 (define ex (first (markdown->apis (file->string "example.md"))))
+#;
 (dict->request ex (hash 'user "Greg"
                         'item 1
                         'qa "qa"
@@ -64,77 +67,78 @@
                         'Authorization "blah"
                         'Date "today"
                         'alias "foo"
-                        'Content-Length 10
                         'Optional-Var 999
                         'Optional-Const 1
-                        'a "a"
-                        'b "b"))
+                        ))
 
 ;; Client: From an HTTP response that has already been matched with a
 ;; api?, fill a dict? with all of the parameterized values.
-(define/contract (response->dict a str)
-  (api? string? . -> . dict?)
-  (define-values (s h e) (split-response str))
+(define/contract (response->dict a h e)
+  (api? string? (or/c bytes? string?) . -> . dict?)
   (dict-merge
-   (match s
-     [(pregexp "^HTTP/(\\d\\.\\d) (\\d{3}) (.*)$" (list _ ver code text))
-      (hash 'HTTP-Ver ver
-            'HTTP-Code code
-            'HTTP-Text text)])
-   (for/hash ([x (regexp-split #rx"\r|\n|\r\n" h)])
-     (match x [(pregexp "^(.+?)\\s*:\\s*(.+?)$" (list _ k v))
-               (values (string->symbol k) v)]))
+   `([HTTP-Ver . ,(extract-http-ver h)]
+     [HTTP-Code . ,(extract-http-code h)]
+     [HTTP-Text ,(extract-http-text h)])
+   (heads-string->dict h)
    (cond [(regexp-match?
            #px"Content-Type\\s*:\\s*application/x-www-form-urlencoded"
            h)
           (for/hash ([x (regexp-split #rx"&" e)] #:when (not (string=? "" x)))
             (match x [(pregexp "^(.+?)=(.+?)$" (list _ k v))
                       (values (string->symbol k) v)]))]
-         [else (hash)])))
+         [else (hash)])
+   `([entity . ,e])
+   ))
 
 #;
-(response->dict ex
-                #<<--
-HTTP/1.1 200 OK
-Date: today
-Content-Type: application/x-www-form-urlencoded
-Content-Length: 7
-
-a=1&b=2
---
-)
+(response->dict
+ ex
+ (string-join (list "HTTP/1.1 200 OK"
+                    "Date: today"
+                    "Content-Type: application/x-www-form-urlencoded"
+                    "Content-Length: 7"
+                    ""
+                    "")
+              "\r\n")
+ "a=1&b=2")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (path-syms xs)
+  (filter-map (lambda (x)
+                (match x
+                  [(list 'VARIABLE v) v]
+                  [else #f]))
+              xs))
+
 (define (syms xs)
-  (for/list ([x xs])
+  (for/fold ([req '()]
+             [opt '()])
+            ([x xs])
     (match x
-      [(list k v) k]
-      [(var x) x])))
+      [(list k (list 'VARIABLE v)) (values (cons v req) opt)]
+      [(list 'OPTIONAL (list _ (list 'VARIABLE v))) (values req (cons v opt))]
+      [(list 'OPTIONAL (list k (list 'CONSTANT _))) (values req (cons k opt))]
+      [else (values req opt)])))
 
 (define (symbol<=? a b)
   (string<=? (symbol->string a) (symbol->string b)))
 
 (define/contract (api-inputs a)
-  (api? . -> . (listof symbol?))
-  (error 'todo)
+  (api? . -> . (values (listof symbol?) (listof symbol?)))
   (match-define (api _ _ _ m p q h _) a)
-  (sort (append (for/list ([x p]
-                           #:when (symbol? x))
-                  x)
-                (syms q)
-                (syms h)
-                #;(syms b))
-        symbol<=?))
+  (define path-req (path-syms p))
+  (define-values (req opt) (syms (append q h)))
+  (values (sort (append path-req req) symbol<=?)
+          (sort opt symbol<=?)))
 
 ;;(api-inputs ex)
 
 (define (api-outputs a)
   (match-define (api _ _ _ _ _ _ _ h) a)
-  (sort (append #;(syms s)
-                (syms h)
-                #;(syms b))
-        symbol<=?))
+  (define-values (req opt) (syms (append h)))
+  (values (sort req symbol<=?)
+          (sort opt symbol<=?)))
 
 ;;(api-outputs ex)
 
@@ -142,43 +146,43 @@ a=1&b=2
 ;;
 ;; for use by client
 
-(define (do-request a d connect)
-  (define req-str (dict->request a d))
-  (log-debug req-str)
-  (define-values (in out) (connect (dict-ref d 'host)))
-  (display req-str out)
-  (flush-output out)
-  (define resp-str (port->string in))
-  (log-debug resp-str)
-  (begin0
-      (response->dict a resp-str)
-    (close-input-port in)
-    (close-output-port out)))
+(define/contract (do-request a d endpoint)
+  (api? dict? (-> string?) . -> . dict?)
+  (define-values (method path+query heads data) (dict->request a d))
+  (define uri (string-append (endpoint) "/" path+query))
+  (call/input-request "1.1" method uri heads
+                      (lambda (in h)
+                        (response->dict a h (read-entity/bytes in h)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define symbol->keyword (compose1 string->keyword symbol->string))
 (define keyword->symbol (compose1 string->symbol keyword->string))
+(define (keyword<=? a b)
+  (string<=? (keyword->string a) (keyword->string b)))
 
-(define (make-api-dict-procedure a connect)
+(define/contract (make-api-dict-procedure a endpoint)
+  (api? (-> string?) . -> . (dict? . -> . dict?))
   (lambda (d)
-    (do-request a d connect)))
+    (do-request a d endpoint)))
 
 ;; Instead of a function that takes a dict, a function that takes
 ;; keyword arguments.
-(define (make-api-keyword-procedure a connect)
+(define/contract (make-api-keyword-procedure a endpoint)
+  (api? (-> string?) . -> . procedure?) ;; (() () #:rest . ->* . dict?))
   (define f (make-keyword-procedure
              (lambda (kws vs . rest)
                (do-request a
                            (map cons
                                 (map keyword->symbol kws)
                                 vs)
-                           connect))))
-  (define kws (map string->keyword
-                   (sort (map symbol->string
-                              (api-inputs a))
-                         string<?)))
-  (procedure-reduce-keyword-arity f 0 kws kws))
+                           endpoint))))
+  (define-values (req opt) (api-inputs a))
+  (define req-kws (map symbol->keyword req))
+  (define opt-kws (map symbol->keyword opt))
+  (define all-kws (sort (append req-kws opt-kws) keyword<=?))
+  ;;(printf "Required: ~v\nOptional: ~v\n" req-kws opt-kws)
+  (procedure-reduce-keyword-arity f 0 req-kws all-kws))
 
 ;; Given a function taking solely keyword arguments, and a dictionary
 ;; of symbol? => any/c, do a keyword-apply treating the dictionary
@@ -192,12 +196,24 @@ a=1&b=2
   (define vs (map cdr xs))
   (keyword-apply f kws vs (list)))
 
+;; (define f (make-api-keyword-procedure ex (lambda (in) #f)))
+;; (f #:user "Greg"
+;;    #:item 1
+;;    #:qa "qa"
+;;    #:qb "qb"
+;;    #:Host "foobar.com"
+;;    #:Authorization "blah"
+;;    #:Date "today"
+;;    #:alias "foo"
+;;    #:Optional-Var 999 ;; this one is optional
+;;    #:Optional-Const 1 ;; this one is optional
+;;    )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define/contract (wffi-lib s)
   (path-string? . -> . (listof api?))
-  (error))
-  ;; (markdown->apis (file->string s)))
+  (markdown->apis (file->string s)))
 
 (define/contract (get-wffi-obj lib name)
   ((listof api?) string? . -> . api?)
@@ -205,17 +221,10 @@ a=1&b=2
   (cond [a a]
         [else (error 'wffi-define "can't find ~s" name)]))
 
-(define/contract (get-wffi-obj/client-dict-proc lib name connect)
-  ((listof api?) string? (string? . -> . (values input-port? output-port?))
-   . -> . procedure?)
-  (make-api-dict-procedure (get-wffi-obj lib name) connect))
+(define/contract (get-wffi-obj/client-dict-proc lib name endpoint)
+  ((listof api?) string? (-> string?) . -> . procedure?)
+  (make-api-dict-procedure (get-wffi-obj lib name) endpoint))
 
-(define/contract (get-wffi-obj/client-keyword-proc lib name connect)
-  ((listof api?) string? (string? . -> . (values input-port? output-port?))
-   . -> . procedure?)
-  (make-api-keyword-procedure (get-wffi-obj lib name) connect))
-
-;; (define as (markdown->apis (file->string "example.md")))
-;; as
-
-;; (define f (make-api-keyword-procedure (first as)))
+(define/contract (get-wffi-obj/client-keyword-proc lib name endpoint)
+  ((listof api?) string? (-> string?) . -> . procedure?)
+  (make-api-keyword-procedure (get-wffi-obj lib name) endpoint))
