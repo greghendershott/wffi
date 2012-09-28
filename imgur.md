@@ -29,8 +29,7 @@ days - default).
 ## Response:
 
     HTTP/1.0 200 OK
-    X-RateLimit-Limit: {}
-    X-RateLimit-Remaining: {}
+
 
 # Upload
 
@@ -39,19 +38,18 @@ Upload a file, including side-loading from a URL.
 ## Request:
 
     PUT /2/upload.json
-      ?key={}
-      &image={}
-      &type={}
-      &[name={}]
-      &[title={}]
-      &[caption={}]
+        ?key={}
+        &image={}
+        &type={}
+        &[name={}]
+        &[title={}]
+        &[caption={}]
     Content-Length: 0
 
 ## Response:
 
     HTTP/1.0 200 OK
-    X-RateLimit-Limit: {}
-    X-RateLimit-Remaining: {}
+
 
 # Album
 
@@ -64,8 +62,7 @@ Returns album information and lists all images that belong to the album.
 ## Response:
     
     HTTP/1.0 200 OK
-    X-RateLimit-Limit: {}
-    X-RateLimit-Remaining: {}
+
 
 # Image
 
@@ -77,7 +74,8 @@ Returns all the information about a certain image
 
 ## Response:
 
-     HTTP/1.0 200 OK
+    HTTP/1.0 200 OK
+
 
 # Delete Image
 
