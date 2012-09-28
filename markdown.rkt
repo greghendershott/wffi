@@ -62,7 +62,8 @@
 
 (define/contract (markdown->apis s)
   (string? . -> . (listof api?))
-  (for/list ([sec (in-list (sections s))])
+  (for/list ([sec (in-list (sections s))]
+             #:when (subsections sec))  ;ignore noncompliant sections
     (define subs (subsections sec))
     (match-define (list name doc req resp) subs)
     (match-define (list (list req-method (list req-path req-query) http-ver)
@@ -72,8 +73,8 @@
                   (parse-template-response resp))
     (init-api name doc req-method req-path req-query req-head resp-head)))
 
-;; ;; test
-;; (define as (markdown->apis (file->string "example.md")))
+;; test
+(define as (markdown->apis (file->string "example.md")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
