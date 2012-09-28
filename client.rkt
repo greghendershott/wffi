@@ -4,7 +4,6 @@
          (planet gh/http/request)
          (planet gh/http/head)
          "api.rkt"
-         ;;"grammar.rkt"
          "markdown.rkt"
          "split.rkt"
          "dict-merge.rkt")

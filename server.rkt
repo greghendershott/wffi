@@ -3,7 +3,6 @@
 (require (planet gh/http)
          net/uri-codec
          "api.rkt"
-         ;;"grammar.rkt"
          "markdown.rkt"
          "split.rkt"
          "dict-merge.rkt"
