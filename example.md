@@ -1,23 +1,58 @@
-# Example GET API
+# Introduction
 
-This is an example of a `GET` API.
+For a section of a markdown file to be used as a web API function, it
+must use a certain format:
 
-## A subsection for the doc.
+---
 
-It is OK to include subsections for the documentation.
+    # Name of API
 
-The following subsections are special. They must be level two ("##")
-and they must be named exactly "Request:" and "Response:".
+    Documentation text here. Use full markdown formatting.
 
-The request grammar allows you to omit some parts:
+    ## Optional subsection(s) with more documentation
+
+    If you need more subsections for documentation, you may use them.
+
+    Then, the section must end with the following two subsections, in
+    this order:
+    
+    ## Request:
+
+    A templated HTTP request message.
+
+    ## Response:
+
+    A templated HTTP response message.
+ 
+---
+
+Note that only the `#` and `##` section/level syntax is supported
+(_not_ the style where you put an "underline" on the line following
+the setion title).
+
+Note that the templated subsections:
+
+1. Must be level 2 (`##`).
+
+2. Must be named exactly `Request:` and `Response:` respectively.
+
+3. Must be in that order.
+
+4. Must be the final two subsections.
+
+## Templated HTTP message
+
+The templated HTTP message grammar allows you to omit some parts that
+are normally required in an HTTP message:
 
 - You may omit the HTTP/1.0 or HTTP/1.1 ending on the request start
-    line.
+  line.
 
 - You do not need to specify any body (entity).
 
-A long series of query parameters may be split into multiple lines
-with indenting, following a common style (e.g. Amazon). For instance:
+As another aid, a long series of query parameters may be split into
+multiple lines with indenting, following a common style
+(e.g. Amazon). For instance:
 
     POST /some/path/
       ?qp1=1
@@ -32,24 +67,47 @@ template allows these to be treated as key/value pairs independent of
 where they apepar in the HTTP message -- for example, in a dictionary
 or as keyword arguments.
 
-- `K: V` means that the key and value are constants. Server requires
-  them as-is. FFI will supply them for client automatically, client
-  doesn't need to specify.
+There are four permutations of constant vs. variable and required
+vs. optional. Each permutation is discussed from the point of view of
+a server and an FFI for clients:
 
-- `K: {}` or `K: {alias}` means that a value must be supplied. Server
-  requires some value to be supplied. FFI requires client to supply
-  the value under a name (in a dict or a keyword arg). The name is `K`
-  when `{}`, otherwise `{name}.
+- `K: V` means that the header or parameter is a constant. Server
+  requires it to be supplied literally.  An FFI should supply them
+  for a client automatically.
 
-- `[K: V]` means that the key/value are optional. Server will assume
-  the value `V` when not supplied. FFI will supply `K: V`
+- `K: {}` _or_ `K: {alias}` means that a header or parameter is
+  variable.  Server requires some value to be supplied. An FFI must
+  require client to supply the value (in a dict or a keyword arg)
+  under a name. The name is `K` when `{}`, otherwise `alias`.
+
+- `[K: V]` means that the constant parameter is optional. Server will
+  assume the value `V` when not supplied. FFI will supply `K: V`
   automatically unless the client supplies another value under the
-  name `K`. Note that no ability to alias the name `K`.
+  name `K`.  (In this case, no ability to alias the name `K`.)
 
-- `[K: {V}]` means that the ke/value are optional. Server will assume
-  no particular value if not supplied. FFI will suppply `K: V` if the
-  client has supplied it, otherwise it will supply nothing at all to
-  the server.
+- `[K: {}]` _or_ `[K: {alias}]` means that the header or parameter is
+  optional. Server will assume no particular value if not
+  supplied. FFI will suppply `K: V` if the client has supplied it,
+  otherwise it will supply nothing at all to the server.
+
+
+## BNF for the templated messages
+
+** TO-DO **
+
+## Examples
+
+The remainder of this document contains sections that fit the
+format. In other words, this markdown document is itself a
+specification for an imaginary web service.
+
+# Example GET API
+
+This is an example of a `GET` API.
+
+## A subsection for the doc.
+
+It is OK to include subsections for the documentation.
 
 ## Request:
 
@@ -105,7 +163,7 @@ using the same domain name will not result in an error response.
 > You can create up to 250 domains per account.
 
 > If you require additional domains, go to
-http://aws.amazon.com/contact-us/simpledb-limit-request/.
+<http://aws.amazon.com/contact-us/simpledb-limit-request/>.
 
 ## Request:
 
