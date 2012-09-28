@@ -3,6 +3,7 @@
 (require net/uri-codec
          (planet gh/http/request)
          (planet gh/http/head)
+         "main.rkt"
          "api.rkt"
          "markdown.rkt"
          "split.rkt"
@@ -11,10 +12,8 @@
 (provide make-api-keyword-procedure
          api-inputs
          apply-dict
-         wffi-lib
-         get-wffi-obj
-         get-wffi-obj/client-dict-proc
-         get-wffi-obj/client-keyword-proc
+         wffi-kwd-proc
+         wffi-dict-proc
          )
 
 (define/contract (dict->request a d)
@@ -38,21 +37,13 @@
                      [(list 'VARIABLE k) (format "~a" (dict-ref d k))]
                      [else (error 'dict->request)]))
                  ""))
-  (define query
-    (alist->form-urlencoded (filter values (for/list ([x q])
-                                             (to-cons x)))))
+  (define query (alist->form-urlencoded (filter-map to-cons q)))
   (define method (string-upcase (symbol->string m)))
-  (define path+query
-    (string-append path
-                   (cond [(string=? "" query) ""]
-                         [else (string-append "?" query)])))
-  (define heads (filter values (for/list ([x h])
-                                 (to-cons x))))
-  ;; (define body (alist->form-urlencoded
-  ;;               (for/list ([x b])
-  ;;                 (match x
-  ;;                   [(list k v) (cons k (format "~a" (dict-ref d k v)))]
-  ;;                   [(var k) (cons k (format "~a" (dict-ref d x)))]))))
+  (define path+query (string-append path
+                                    (cond [(string=? "" query) ""]
+                                          [else (string-append "?" query)])))
+  (define heads (filter-map to-cons h))
+  ;; (define body (alist->form-urlencoded (filter-map to-cons b)))
   (values method path+query heads #f))
 
 
@@ -208,22 +199,10 @@
 ;;    #:Optional-Const 1 ;; this one is optional
 ;;    )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define/contract (wffi-lib s)
-  (path-string? . -> . (listof api?))
-  (markdown->apis (file->string s)))
-
-(define/contract (get-wffi-obj lib name)
-  ((listof api?) string? . -> . api?)
-  (define a (findf (lambda (x) (string=? name (api-name x))) lib))
-  (cond [a a]
-        [else (error 'wffi-define "can't find ~s" name)]))
-
-(define/contract (get-wffi-obj/client-dict-proc lib name endpoint)
+(define/contract (wffi-dict-proc lib name endpoint)
   ((listof api?) string? (-> string?) . -> . procedure?)
-  (make-api-dict-procedure (get-wffi-obj lib name) endpoint))
+  (make-api-dict-procedure (wffi-obj lib name) endpoint))
 
-(define/contract (get-wffi-obj/client-keyword-proc lib name endpoint)
+(define/contract (wffi-kwd-proc lib name endpoint)
   ((listof api?) string? (-> string?) . -> . procedure?)
-  (make-api-keyword-procedure (get-wffi-obj lib name) endpoint))
+  (make-api-keyword-procedure (wffi-obj lib name) endpoint))

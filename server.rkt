@@ -25,12 +25,11 @@
    (for/hash ([v (regexp-split #rx"/" p)]
               [k pt] #:when (not (string? k)))
      (values (cadr k) v))
-   (for/hash ([x (regexp-split #rx"&" q)] #:when (not (string=? "" x)))
-     (match x [(pregexp "^(.+?)=(.+?)$" (list _ k v))
-               (values (string->symbol k) v)]))
-   (for/hash ([x (regexp-split #rx"\r|\n|\r\n" h)])
-     (match x [(pregexp "^(.+?)\\s*:\\s*(.+?)$" (list _ k v))
-               (values (string->symbol k) v)]))
+   (form-urlencoded->alist q)
+   ;; (for/hash ([x (regexp-split #rx"&" q)] #:when (not (string=? "" x)))
+   ;;   (match x [(pregexp "^(.+?)=(.+?)$" (list _ k v))
+   ;;             (values (string->symbol k) v)]))
+   (heads-string->dict h)
    (cond [(regexp-match?
            #px"Content-Type\\s*:\\s*application/x-www-form-urlencoded"
            h)
@@ -54,7 +53,8 @@ a=1&b=2
 --
 )
 
-(define (dict->response a d)
+(define/contract (dict->response a d)
+  (api? dict? . -> . (values string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
       [(list k (list 'CONSTANT v)) (cons k v)]
@@ -71,22 +71,11 @@ a=1&b=2
                          (dict-ref d 'HTTP-Ver "1.0")
                          (dict-ref d 'HTTP-Code "200")
                          (dict-ref d 'HTTP-Text "OK")))
-  (define head
-    (string-append
-     (string-join (filter values (for/list ([x h])
-                                   (define kv (to-cons x))
-                                   (cond [kv (format "~a: ~a" (car kv) (cdr kv))]
-                                         [else #f])))
-                  "\r\n")
-     "\r\n"))
-  ;; (define body (alist->form-urlencoded
-  ;;               (for/list ([x b])
-  ;;                 (match x
-  ;;                   [(list k v) (cons k (format "~a" (dict-ref d k v)))]
-  ;;                   [(var k) (cons k (format "~a" (dict-ref d x)))]))))
-  (values status head #|body|#))
+  (define heads (filter-map to-cons h))
+  ;; (define body (alist->form-urlencoded (filter-map to-cons b)))
+  (values status heads #f))
 
-
+#;
 (dict->response ex (hash 'Date (seconds->gmt-string)
                          'Content-Type "text/plain"
                          'Content-Length 10))
@@ -107,9 +96,15 @@ a=1&b=2
   (cond [(request-matches-api? a r)
          (let* ([dict-req (request->dict a r)]
                 [dict-resp (f dict-req)])
-           (printf "=== Request matched ~s\nIN==> ~v\n<==OUT ~v\n"
-                   (api-name a) dict-req dict-resp)
-           (dict->response a dict-resp))]
+           (log-debug (format "=== Request matched ~s\nIN==> ~v\n<==OUT ~v"
+                              (api-name a) dict-req dict-resp))
+           (define-values (s h e) (dict->response a dict-resp))
+           (string-append s "\r\n"
+                          (string-join (map (lambda (x)
+                                              (format "~a: ~a" (car x) (cdr x)))
+                                            h)
+                                       "\r\n")
+                          "\r\n\r\n"))]
         [else #f]))
 
 (define/contract (dispatch r)

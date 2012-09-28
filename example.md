@@ -150,6 +150,11 @@ This is an example of a `POST` request API.
 
 # Create Domain
 
+> **_Note_: This section is me cribbing some AWS SDB documentation. In
+  other words, creating this markdown file for an existing web service
+  should be _almost_ a copy-and-paste excercise. That's the idea,
+  anyway.**
+
 The CreateDomain operation creates a new domain. The domain name must
 be unique among the domains associated with the Access Key ID provided
 in the request. The CreateDomain operation might take 10 or more

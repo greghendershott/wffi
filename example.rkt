@@ -1,8 +1,7 @@
 #lang racket
 
-(require wffi
-         wffi/client
-         )
+(require wffi/main
+         wffi/server)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; For testing, some requests
@@ -69,17 +68,17 @@ asdfasdfasdf
 
 ;; Use the api to receive requests as a server and dispatch them.
 
-#|
 (require (planet gh/http))
 (define lib (wffi-lib "example.md"))
-(register-api! (get-wffi-obj lib "Example GET API")
+(register-api! (wffi-obj lib "Example GET API")
                (lambda (d)
                  (hash 'Status "200 OK"
-                       'date (seconds->gmt-string)
+                       'Date (seconds->gmt-string)
                        'type "text/plain"
-                       'len 0
+                       'Content-Length 0
+                       'Content-Type "text/plain"
                        'body "")))
-(register-api! (get-wffi-obj lib "Example POST API")
+(register-api! (wffi-obj lib "Example POST API")
                (lambda (d)
                  (hash 'Status "201 Created"
                        'date (seconds->gmt-string))))
@@ -90,45 +89,5 @@ asdfasdfasdf
   (displayln (dispatch example-post-request))
   ;; (displayln (dispatch upload-archive-request))
   (displayln (dispatch "GET /not-found HTTP 1.0\n\n")))
-|#
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Making requests as a client.
-;; Example using wffi-lib, get-wiff-obj, get-wifi-obj/kw.
-
-
-(require (planet gh/http))
-(define lib (wffi-lib "example.md"))
-(define get-example (get-wffi-obj/client-dict-proc lib "Example GET API"))
-(define get-example/kw (get-wffi-obj/client-keyword-proc lib "Example GET API"))
-
-(get-example (hash
-              'user "greg"
-              'item "12345"
-              'a "A"
-              'b "B" ;try comment this out to catch missing keyword
-              ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
-              'date (seconds->gmt-string)
-              'endpoint "endpoint"
-              'auth "auth"))
-
-(get-example/kw #:user "greg"
-                #:item "1"
-                #:a "a"
-                #:b "b" ;try comment this out to catch missing keyword
-                ;;#:UNDEFINED "undefined" ;try un-comment to catch undef kw
-                #:date (seconds->gmt-string)
-                #:endpoint "endpoint"
-                #:auth "auth")
-
-(apply-dict get-example/kw
-            (hash
-             'user "greg"
-             'item "12345"
-             'a "A"
-             'b "B" ;try comment this out to catch missing keyword
-             ;;'UNDEFINED "UNDEFINED" ;try un-comment to catch undef kw
-             'date (seconds->gmt-string)
-             'endpoint "endpoint"
-             'auth "auth"))
