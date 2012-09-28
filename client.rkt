@@ -139,7 +139,7 @@
 (define/contract (do-request a d endpoint)
   (api? dict? (-> string?) . -> . dict?)
   (define-values (method path+query heads data) (dict->request a d))
-  (define uri (string-append (endpoint) "/" path+query))
+  (define uri (string-append (endpoint) path+query))
   (call/input-request "1.1" method uri heads
                       (lambda (in h)
                         (response->dict a h (read-entity/bytes in h)))))
