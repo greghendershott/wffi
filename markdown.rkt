@@ -46,19 +46,28 @@
 (define (join-query-params s)
   (regexp-replace* "\n([?&])" s "\\1"))
 
-(define (ensure-double-newline s)
-  (cond [(regexp-match? #px"\n{2}" s) s]
-        [else (string-append s "\n")]))
+(define (end-with-newline s)
+  (regexp-replace #rx"^(.+?)(\n*?)$" s "\\1\n"))
+
+(define (ignore-subsubsections s)
+  (regexp-replace #rx"(?:\n###).+$" s "\n"))
 
 (define clean
-  (compose1 ensure-double-newline
+  (compose1 end-with-newline
             join-query-params
             kill-leading-spaces
+            ignore-subsubsections
             ))
 
-;;(kill-leading-spaces "\n  adfasdf\n asdfasdfds")
-;;(join-query-params "fooo\n&bar\n&foo")
-;;(ensure-double-newline-ending "adsfadsf\n\nasdfasdf\n")
+;; (end-with-newline "abc\n123")
+;; (end-with-newline "abc\n123\n")
+;; (end-with-newline "abc\n123\n\n")
+;; (end-with-newline "abc\n123\n\n\n")
+;; (ignore-subsubsections "abc\n### yo yo\n\n")
+;; (end-with-newline (ignore-subsubsections "abc\n123\n\n\n"))
+;; (kill-leading-spaces "\n  adfasdf\n asdfasdfds")
+;; (join-query-params "fooo\n&bar\n&foo")
+
 
 (define/contract (markdown->apis s)
   (string? . -> . (listof api?))
@@ -73,8 +82,9 @@
                   (parse-template-response resp))
     (init-api name doc req-method req-path req-query req-head resp-head)))
 
-;; test
-(define as (markdown->apis (file->string "example.md")))
+;; ;; test
+;; (define as (markdown->apis (file->string "imgur.md")))
+;; as
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
