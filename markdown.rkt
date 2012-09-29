@@ -41,10 +41,19 @@
 (define px-api (pregexp (string-append "^"
                                        "# (.+?)\n+" ;name
                                        "(.*?)\n+"   ;desc
-                                       "## (?i:Request):\\s*\n+"
-                                       "(.+?)\n*"   ;req
-                                       "## (?i:Response):\\s*\n+"
-                                       "(.+?)\n*"   ;resp
+                                       "## (?i:Request):?\\s*\n"
+                                       "````\n"
+                                       "(.+?)"   ;req
+                                       "````\n"
+                                       "[^#]*?"
+                                       "(?:"
+                                         "## (?i:Response):?\\s*\n"
+                                         "````\n"
+                                         "(.*?)"   ;resp
+                                         "````\n"
+                                         ".*?"
+                                       ")?"
+                                       ".*?"
                                        "$"
                                        )))
 
@@ -85,6 +94,7 @@
             join-query-params
             kill-leading-spaces
             ignore-subsubsections
+            (lambda (s) (or s ""))
             ))
 
 ;; (end-with-newline "abc\n123")
@@ -96,9 +106,9 @@
 ;; (kill-leading-spaces "\n  adfasdf\n asdfasdfds")
 ;; (join-query-params "fooo\n&bar\n&foo")
 
-;; ;; test
-;; (define as (markdown->apis (file->string "imgur.md")))
-;; as
+;; test
+(define as (markdown->apis (file->string "imgur.md")))
+as
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
