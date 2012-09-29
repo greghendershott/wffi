@@ -12,6 +12,7 @@
          api-inputs
          apply-dict
          wffi-kwd-proc
+         wffi-rest-proc
          wffi-dict-proc
          wffi-lib
          wffi-obj
@@ -153,15 +154,23 @@
 (define (keyword<=? a b)
   (string<=? (keyword->string a) (keyword->string b)))
 
+;; This is the fundamental procedure: dict? -> dict?
 (define/contract (make-api-dict-procedure a endpoint)
   (api? (-> string?) . -> . (dict? . -> . dict?))
   (lambda (d)
     (do-request a d endpoint)))
 
-;; Instead of a function that takes a dict, a function that takes
-;; keyword arguments.
+;; This makes a function where the dict may be supplied as key/value
+;; pairs as with `hash`: 'key value ... ... -> dict?
+(define (make-api-rest-procedure a endpoint)
+  (api? (-> string?) . -> . procedure?)
+  (compose1 (make-api-dict-procedure a endpoint)
+            hash))
+
+;; This makes a function where they're supplied as keyword arguments:
+;; #:keyword value ... ... -> dict?
 (define/contract (make-api-keyword-procedure a endpoint)
-  (api? (-> string?) . -> . procedure?) ;; (() () #:rest . ->* . dict?))
+  (api? (-> string?) . -> . procedure?)
   (define f (make-keyword-procedure
              (lambda (kws vs . rest)
                (do-request a
@@ -188,22 +197,15 @@
   (define vs (map cdr xs))
   (keyword-apply f kws vs (list)))
 
-;; (define f (make-api-keyword-procedure ex (lambda (in) #f)))
-;; (f #:user "Greg"
-;;    #:item 1
-;;    #:qa "qa"
-;;    #:qb "qb"
-;;    #:Host "foobar.com"
-;;    #:Authorization "blah"
-;;    #:Date "today"
-;;    #:alias "foo"
-;;    #:Optional-Var 999 ;; this one is optional
-;;    #:Optional-Const 1 ;; this one is optional
-;;    )
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define/contract (wffi-dict-proc lib name endpoint)
-  ((listof api?) string? (-> string?) . -> . procedure?)
+  ((listof api?) string? (-> string?) . -> . (dict? . -> . dict?))
   (make-api-dict-procedure (wffi-obj lib name) endpoint))
+
+(define/contract (wffi-rest-proc lib name endpoint)
+  ((listof api?) string? (-> string?) . -> . procedure?)
+  (make-api-rest-procedure (wffi-obj lib name) endpoint))
 
 (define/contract (wffi-kwd-proc lib name endpoint)
   ((listof api?) string? (-> string?) . -> . procedure?)
