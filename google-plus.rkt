@@ -15,8 +15,7 @@
 
 (define endpoint (make-parameter "https://www.googleapis.com"))
 (define lib (wffi-lib "google-plus.md"))
-(define get-person (wffi-kwd-proc lib "Get person" endpoint))
+(define get-person (wffi-rest-proc lib "Get person" endpoint))
 
-(get-person #:Host "www.googleapis.com"
-            #:key (api-key)
-            #:userId "107023078912536369392")
+(get-person 'key (api-key)
+            'userId "107023078912536369392")
