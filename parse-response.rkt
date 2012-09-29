@@ -138,13 +138,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 --
 )
 
-;; (define str
-;; #<<--
-;; HTTP/1.1 404 Not Found
-;; Date: Today
-;; --
-;; )
-
+#;
 (let ([in (open-input-string str)])
   (displayln "LEXER============")
   (define f (lambda () (template-response-lexer in)))
@@ -155,6 +149,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (unless (eq? t 'EOF)
       (loop))))
 
+#;
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
   (port-count-lines! in)
