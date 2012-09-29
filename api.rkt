@@ -9,9 +9,9 @@
 (struct api
         (name        ;string?
          desc        ;string?
-         route-px    ;pregexp?
          req         ;string?  Stored only for doc purposes
          resp        ;string?  Stored only for doc purposes
+         route-px    ;pregexp?
          req-method  ;list? parsed
          req-path    ;list? parsed
          req-query   ;list? parsed
