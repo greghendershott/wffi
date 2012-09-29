@@ -37,35 +37,48 @@
 (define lib (wffi-lib "imgur.md"))
 
 (define stats (compose1 (lambda (x) (check-response 'stats x))
-                        (wffi-kwd-proc lib "Stats" endpoint)))
+                        (wffi-rest-proc lib "Stats" endpoint)))
 
 (define upload (compose1 (lambda (x) (check-response 'upload x))
-                         (wffi-kwd-proc lib "Upload" endpoint)))
+                         (wffi-rest-proc lib "Upload" endpoint)))
 
 (define album (compose1 (lambda (x) (check-response 'album x))
-                        (wffi-kwd-proc lib "Album" endpoint)))
+                        (wffi-rest-proc lib "Album" endpoint)))
 
 (define image (compose1 (lambda (x) (check-response 'image x))
-                        (wffi-kwd-proc lib "Image" endpoint)))
-
+                        (wffi-rest-proc lib "Image" endpoint)))
 (define delete (compose1 (lambda (x) (check-response 'delete x))
-                         (wffi-kwd-proc lib "Delete Image" endpoint)))
+                         (wffi-rest-proc lib "Delete Image" endpoint)))
 
 
 (define (upload-uri uri name)
-  (upload #:key (api-key)
-          #:image uri
-          #:type "url"
-          #:name name))
+  (upload 'key (api-key)
+          'image uri
+          'type "url"
+          'name name))
 
 ;; Test
-;; (stats) 
-;; (stats #:view "today")
-;; (upload #:key (api-key) #:image "http://racket-lang.org/logo.png"
-;;         #:type "url" #:name "Racket logo")
-;; (upload-uri "http://racket-lang.org/logo.png" "Racket logo")
-;; (album #:hash 2)
-;; (image #:hash 2)
+#|
+
+(stats) 
+(stats 'view "today")
+
+(upload 'key (api-key) 'image "http://racket-lang.org/logo.png"
+        'type "url" 'name "Racket logo")
+(upload-uri "http://racket-lang.org/logo.png" "Racket logo")
+
+(album 'hash 2)
+(image 'hash 2)
+
+;; Upload an image, get its "hash" ID from the response, and pass that
+;; to `image` to see the attributes:
+(define h (dict-refs (upload-uri "http://racket-lang.org/logo.png" "Racket logo")
+                     'upload 'image 'hash))
+(image 'hash h)
 
 ;; This isn't working. Getting 400 Bad Request:
-;; (delete #:hash "oWuf6")
+(delete 'hash "oWuf6")
+
+|#
+
+

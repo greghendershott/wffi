@@ -57,7 +57,7 @@ Returns album information and lists all images that belong to the album.
 
 ## Request:
 
-    GET /2/album/{id}.json
+    GET /2/album/{hash}.json
 
 ## Response:
     
