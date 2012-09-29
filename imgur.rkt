@@ -1,7 +1,6 @@
 #lang racket
 
-(require wffi
-         wffi/client
+(require wffi/client
          json)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

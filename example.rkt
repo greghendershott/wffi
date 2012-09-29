@@ -1,7 +1,6 @@
 #lang racket
 
-(require wffi/main
-         wffi/server)
+(require wffi/server)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; For testing, some requests

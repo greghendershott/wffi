@@ -5,22 +5,24 @@
          "api.rkt"
          "markdown.rkt"
          "split.rkt"
-         "dict-merge.rkt"
-         )
+         "dict-merge.rkt")
 
 (provide apis
          register-api!
          dispatch
          try-api?
          request-matches-api?
-         )
+         wffi-lib
+         wffi-obj
+         api->markdown
+         (struct-out api))
 
 ;; From an HTTP request that has already been matched with an api?,
 ;; fill a dict? with all of the parameterized values.
 (define/contract (request->dict a s)
   (api? string? . -> . dict?)
   (define-values (m p q h e) (split-request s))
-  (match-define (api _ _ _ _ pt _ _ _) a)
+  (define pt (api-req-path a))
   (dict-merge
    (for/hash ([v (regexp-split #rx"/" p)]
               [k pt] #:when (not (string? k)))
@@ -66,7 +68,7 @@ a=1&b=2
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
-  (match-define (api _ _ _ _ _ _ _ h) a)
+  (define h (api-resp-head a))
   (define status (format "HTTP/~a ~a ~a"
                          (dict-ref d 'HTTP-Ver "1.0")
                          (dict-ref d 'HTTP-Code "200")

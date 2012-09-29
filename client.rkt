@@ -3,7 +3,6 @@
 (require net/uri-codec
          (planet gh/http/request)
          (planet gh/http/head)
-         "main.rkt"
          "api.rkt"
          "markdown.rkt"
          "split.rkt"
@@ -14,7 +13,10 @@
          apply-dict
          wffi-kwd-proc
          wffi-dict-proc
-         )
+         wffi-lib
+         wffi-obj
+         api->markdown
+         (struct-out api))
 
 (define/contract (dict->request a d)
   (api? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
@@ -29,7 +31,7 @@
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
-  (match-define (api _ _ _ m p q h _) a)
+  (match-define (api _ _ _ _ _ m p q h _) a)
   (define path
     (string-join (for/list ([x p])
                    (match x
@@ -116,7 +118,7 @@
 
 (define/contract (api-inputs a)
   (api? . -> . (values (listof symbol?) (listof symbol?)))
-  (match-define (api _ _ _ m p q h _) a)
+  (match-define (api _ _ _ _ _ m p q h _) a)
   (define path-req (path-syms p))
   (define-values (req opt) (syms (append q h)))
   (values (sort (append path-req req) symbol<=?)
@@ -125,7 +127,7 @@
 ;;(api-inputs ex)
 
 (define (api-outputs a)
-  (match-define (api _ _ _ _ _ _ _ h) a)
+  (define h (api-resp-head a))
   (define-values (req opt) (syms (append h)))
   (values (sort req symbol<=?)
           (sort opt symbol<=?)))
