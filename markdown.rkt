@@ -55,9 +55,9 @@
      (match-define (list (list req-method (list req-path req-query) http-ver)
                          req-head
                          req-body)
-                   (parse-template-request (clean req)))
+                   (parse-template-request (open-input-string (clean req))))
      (match-define (list resp-stat resp-head resp-body) 
-                   (parse-template-response (clean resp)))
+                   (parse-template-response (open-input-string (clean resp))))
      (init-api name doc req resp
                req-method req-path req-query req-head resp-head)]
     [else #f]))

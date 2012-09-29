@@ -67,11 +67,11 @@
 
     (constant [(DATUM) (list 'CONSTANT $1)])
     
-    (response [(start-line heads body) (list $1 $2 $3)]
-              [(start-line heads) (list $1 $2 '())])
+    (response [(start-line heads body) (list $1 $2 $3)])
 
     (start-line [(http-ver WS code CRLF) (list $1 $3 "")]
-                [(http-ver WS code WS desc CRLF) (list $1 $3 $5)])
+                [(http-ver WS code WS desc CRLF) (list $1 $3 $5)]
+                [() '()])
     
     (http-ver [(DATUM) $1])
 
@@ -103,7 +103,8 @@
     (head-value-list [() '()]
                      [(head-value-list head-value-token) (cons $2 $1)])
 
-    (body [(ENTITY) (substring $1 2)])
+    (body [(ENTITY) (substring $1 2)]
+          [() '()])
 
     )))
 
@@ -113,8 +114,8 @@
                                   (list 'VARIABLE (string->symbol datum))]
                                  [else value])))
 
-(define (parse-template-response s)
-  (define in (open-input-string s))
+(define (parse-template-response in)
+  (port-count-lines! in)
   (template-response-parser (lambda () (template-response-lexer in))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -137,7 +138,13 @@ Notice that tokens like :, &, ? are treated as normal chars here.
 --
 )
 
-#;
+;; (define str
+;; #<<--
+;; HTTP/1.1 404 Not Found
+;; Date: Today
+;; --
+;; )
+
 (let ([in (open-input-string str)])
   (displayln "LEXER============")
   (define f (lambda () (template-response-lexer in)))
@@ -148,7 +155,7 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (unless (eq? t 'EOF)
       (loop))))
 
-#;
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
+  (port-count-lines! in)
   (template-response-parser (lambda () (template-response-lexer in))))

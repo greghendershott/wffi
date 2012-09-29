@@ -127,8 +127,7 @@
                                   (list 'VARIABLE (string->symbol datum))]
                                  [else value])))
 
-(define (parse-template-request s)
-  (define in (open-input-string s))
+(define (parse-template-request in)
   (port-count-lines! in)
   (template-request-parser (lambda () (template-request-lexer in))))
 
