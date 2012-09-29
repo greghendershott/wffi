@@ -10,6 +10,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define/contract (markdown->apis s)
+  (string? . -> . (listof api?))
+  (filter-map section->api (sections s)))
+
 (define (sections s)
   (let loop ([xs (map car (regexp-match-positions* #rx"(?m:^# .+?\n)" s))])
     (cond
@@ -28,10 +32,18 @@
                                        "$"
                                        )))
 
-(define (subsections s)
-  (match s
-    [(pregexp px-api (list _ name desc req resp))
-     (list name desc (clean req) (clean resp))]
+(define/contract (section->api sec)
+  (string? . -> . (or/c #f api?))
+  (match sec
+    [(pregexp px-api (list _ name doc req resp))
+     (match-define (list (list req-method (list req-path req-query) http-ver)
+                         req-head
+                         req-body)
+                   (parse-template-request (clean req)))
+     (match-define (list resp-stat resp-head resp-body) 
+                   (parse-template-response (clean resp)))
+     (init-api name doc req resp
+               req-method req-path req-query req-head resp-head)]
     [else #f]))
 
 ;; Kill leading spaces, including but not limted to 4 spaces for code
@@ -67,20 +79,6 @@
 ;; (end-with-newline (ignore-subsubsections "abc\n123\n\n\n"))
 ;; (kill-leading-spaces "\n  adfasdf\n asdfasdfds")
 ;; (join-query-params "fooo\n&bar\n&foo")
-
-
-(define/contract (markdown->apis s)
-  (string? . -> . (listof api?))
-  (for/list ([sec (in-list (sections s))]
-             #:when (subsections sec))  ;ignore noncompliant sections
-    (define subs (subsections sec))
-    (match-define (list name doc req resp) subs)
-    (match-define (list (list req-method (list req-path req-query) http-ver)
-                        req-head
-                        req-body) (parse-template-request req))
-    (match-define (list resp-stat resp-head resp-body) 
-                  (parse-template-response resp))
-    (init-api name doc req-method req-path req-query req-head resp-head)))
 
 ;; ;; test
 ;; (define as (markdown->apis (file->string "imgur.md")))
