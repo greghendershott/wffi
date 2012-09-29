@@ -14,7 +14,8 @@
   (string? . -> . (listof api?))
   (filter-map section->api (sections s)))
 
-(define (sections s)
+(define/contract (sections s)
+  (string? . -> . (listof string?))
   (let loop ([xs (map car (regexp-match-positions* #rx"(?m:^# .+?\n)" s))])
     (cond
      [(empty? xs) (list)]
@@ -87,38 +88,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
 
-;; ;; Return a string with documentation for the API, in markdown format.
-;; (define/contract (api->markdown x)
-;;   (api? . -> . string?)
-;;   (string-append
-;;    (header1 (api-name x))
-;;    (api-desc x) "\n"
-;;    "\n"
-;;    (header2 "Request")
-;;    (block-indent (api-req x)) "\n"
-;;    "\n"
-;;    (header2 "Response")
-;;    (block-indent (api-resp x)) "\n"
-;;    "\n"
-;;    ))
+;; Return a string with documentation for the API, in markdown format.
+;; Not hard, since we kept the original markdown fragments.
+(define/contract (api->markdown x)
+  (api? . -> . string?)
+  (string-append "# " (api-name x) "\n"
+                 "\n"
+                 (api-desc x) "\n"
+                 "\n"
+                 "## Request:\n"
+                 "\n"
+                 (api-req x) "\n"
+                 "\n"
+                 "## Response:\n"
+                 "\n"
+                 (api-resp x) "\n"
+                 "\n"
+                 ))
 
-;; (define (header s c)
-;;   (string-append s "\n"
-;;                  (make-string (string-length s) c) "\n"
-;;                  "\n"))
-
-;; (define (header1 s)
-;;   (header s #\=))
-
-;; (define (header2 s)
-;;   (header s #\-))
-
-;; (define (block-indent s)
-;;   (string-append "    "
-;;                  (string-join (regexp-split "\n" s)
-;;                               "\n    ")))
-                              
-;; ;; Return a string with documentation for the API, in Scribble format.
-;; (define/contract (api->scribble x)
-;;   (api? . -> . string?)
-;;   "")                                   ;TO-DO
+;; Return documentation for the API, in Scribble format.
+(define/contract (api->scribble a)
+  (api? . -> . any/c)
+  (error 'api->scribble "TO-DO")
+  "")
