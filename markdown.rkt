@@ -20,7 +20,7 @@
 ;; Pregexp for one section of a markdown file documenting one API.
 (define px-api (pregexp (string-append "^"
                                        "# (.+?)\n+" ;name
-                                       "(.+?)\n+"   ;desc
+                                       "(.*?)\n+"   ;desc
                                        "## (?i:Request):\\s*\n+"
                                        "(.+?)\n*"   ;req
                                        "## (?i:Response):\\s*\n+"
