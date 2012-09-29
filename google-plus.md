@@ -9,10 +9,6 @@ https://www.googleapis.com/auth/plus.me. Read more about
 
 ## Request:
 
-    GET /plus/v1/people/{userId}?key={key} HTTP/1.0
-
-## Response:
-
-
-
-# The end
+````
+GET /plus/v1/people/{userId}?key={key} HTTP/1.0
+````

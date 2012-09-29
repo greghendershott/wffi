@@ -16,75 +16,60 @@ are not associated with the API key.
 Display site statistics, such as bandwidth usage, images uploaded,
 image views, and average image size.
 
-## Request:
+## Request
 
-    GET /2/stats.json?[view={}]
-
-### Comments
+````
+GET /2/stats.json?[view={}]
+````
 
 `view`: View the data during a certain time. Accepted values: `today`
 (the past 24 hours), `week` (the past 7 days), `month` (the past 30ish
 days - default).
-
-## Response:
-
-    HTTP/1.0 200 OK
 
 
 # Upload
 
 Upload a file, including side-loading from a URL.
 
-## Request:
+## Request
 
-    PUT /2/upload.json
-        ?key={}
-        &image={}
-        &type={}
-        &[name={}]
-        &[title={}]
-        &[caption={}]
-    Content-Length: 0
-
-## Response:
-
-    HTTP/1.0 200 OK
-
+````
+PUT /2/upload.json
+    ?key={}
+    &image={}
+    &type={}
+    &[name={}]
+    &[title={}]
+    &[caption={}]
+Content-Length: 0
+````
 
 # Album
 
 Returns album information and lists all images that belong to the album.
 
-## Request:
+## Request
 
-    GET /2/album/{hash}.json
-
-## Response:
-    
-    HTTP/1.0 200 OK
-
+````
+GET /2/album/{hash}.json
+````
 
 # Image
 
 Returns all the information about a certain image
 
-## Request:
+## Request
 
-    GET /2/image/{hash}.json
-
-## Response:
-
-    HTTP/1.0 200 OK
-
+````
+GET /2/image/{hash}.json
+````
 
 # Delete Image
 
 Delete an image.
 
-## Request:
+## Request
 
-    DELETE /2/delete/{hash}
-
-## Response:
-
-     HTTP/1.0 200 OK
+````
+DELETE /2/delete/{hash}
+````

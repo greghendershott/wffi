@@ -28,14 +28,14 @@
 (define lib (wffi-lib "last.fm.md"))
 
 (define chart (compose1 (lambda (x) (check-response 'chart x))
-                        (wffi-kwd-proc lib "Chart" endpoint)))
+                        (wffi-rest-proc lib "Chart" endpoint)))
 
 ;; Examples
 
-;; (chart #:api-key (api-key)
-;;        #:method "chart.getHypedArtists"
-;;        #:limit 1)
+(chart 'api-key (api-key)
+       'method "chart.getHypedArtists"
+       'limit 1)
 
-;; (chart #:api-key (api-key)
-;;        #:method "chart.getLovedTracks"
-;;        #:limit 1)
+(chart 'api-key (api-key)
+       'method "chart.getLovedTracks"
+       'limit 1)

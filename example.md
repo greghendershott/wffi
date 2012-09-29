@@ -18,11 +18,13 @@ must use a certain format:
     
     ## Request:
 
-    A templated HTTP request message.
+    A templated HTTP request message, as a code block using markdown's
+    ```` notation.
 
     ## Response:
 
-    A templated HTTP response message.
+    A templated HTTP response message, as a code block using
+    markdown's ```` notation.
  
 ---
 
@@ -34,11 +36,16 @@ Note that the templated subsections:
 
 1. Must be level 2 (`##`).
 
-2. Must be named exactly `Request:` and `Response:` respectively.
+2. Must be named exactly `Request:` and `Response:` respectively
+   (although the trailing colon in optional).
 
 3. Must be in that order.
 
 4. Must be the final two subsections.
+
+5. The `Response` section is optional if this is to be used solely for
+   an FFI for a client, although it may be helpful for documentation
+   if the response includes special headers.
 
 ## Templated HTTP message
 
@@ -111,21 +118,30 @@ It is OK to include subsections for the documentation.
 
 ## Request:
 
-    GET /user/{user}/items/{item}?qa={}&[qb={}] HTTP/1.1
-    Host: {}
-    Header-With-Alias: {alias}
-    Authorization: {}
-    Constant: Constant Value
-    [Optional-Var: {}]
-    [Optional-Const: 10000]
-    Date: {}
+````
+GET /user/{user}/items/{item}?qa={}&[qb={}] HTTP/1.1
+Host: {}
+Header-With-Alias: {alias}
+Authorization: {}
+Constant: Constant Value
+[Optional-Var: {}]
+[Optional-Const: 10000]
+Date: {}
+````
 
 ## Response:
 
-    HTTP/1.1 200 OK
-    Date: {}
-    Content-Type: {}
-    Content-Length: {}
+The `Response` section is optional when this file is being used by an
+FFI for clients. However if the function returns any special headers,
+it would be good to include the section for documentation
+purpose. Anyway it is mandatory when using this to implement a server.
+
+````
+HTTP/1.1 200 OK
+Date: {}
+Content-Type: {}
+Content-Length: {}
+````
 
 # Example POST API
 
@@ -133,27 +149,22 @@ This is an example of a `POST` request API.
 
 ## Request:
 
-    POST /user/{user}/items/{item} HTTP/1.1
-    Host: {endpoint}
-    Authorization: {auth}
-    Content-Type: application/x-www-form-urlencoded
-    Content-Length: {len}
-    
-    a={a}&b={b}
-    
-## Response:
+````
+POST /user/{user}/items/{item} HTTP/1.1
+Host: {endpoint}
+Authorization: {auth}
+Content-Type: application/x-www-form-urlencoded
+Content-Length: {len}
 
-    HTTP/1.1 200 OK
-    Date: {date}
-    
-    {body}
+a={a}&b={b}
+````
 
 # Create Domain
 
-> **_Note_: This section is me cribbing some AWS SDB documentation. In
-  other words, creating this markdown file for an existing web service
-  should be _almost_ a copy-and-paste excercise. That's the idea,
-  anyway.**
+> _Note_: This section is me cribbing some AWS SDB documentation. In
+>  other words, creating this markdown file for an existing web service
+>  should be _almost_ a copy-and-paste excercise. That's the idea,
+>  anyway.
 
 The CreateDomain operation creates a new domain. The domain name must
 be unique among the domains associated with the Access Key ID provided
@@ -172,18 +183,18 @@ using the same domain name will not result in an error response.
 
 ## Request:
 
-    POST /
-      ?Action=CreateDomain
-      &AWSAccessKeyId={public-key}
-      &DomainName={domain}
-      &SignatureVersion=2
-      &SignatureMethod=HmacSHA256
-      &Timestamp={timestamp}
-      &Version=2009-04-15
-      &Signature={}
-    Date: {}
+````
+POST /
+     ?Action=CreateDomain
+     &AWSAccessKeyId={public-key}
+     &DomainName={domain}
+     &SignatureVersion=2
+     &SignatureMethod=HmacSHA256
+     &Timestamp={timestamp}
+     &Version=2009-04-15
+     &Signature={}
+Date: {}
+````
 
 ## Response:
 
-    HTTP 201 Created
-    Date: {date}

@@ -106,9 +106,9 @@
 ;; (kill-leading-spaces "\n  adfasdf\n asdfasdfds")
 ;; (join-query-params "fooo\n&bar\n&foo")
 
-;; test
-(define as (markdown->apis (file->string "imgur.md")))
-as
+;; ;; test
+;; (define as (markdown->apis (file->string "imgur.md")))
+;; as
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown
