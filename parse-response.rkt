@@ -50,11 +50,13 @@
    (end EOF)
    (src-pos)
    (error (lambda (tok-ok? tok-name tok-value start end)
-            (error 'request-parser
-                   "tok-ok?= ~a. ~a is ~a at ~a:~a"
-                   tok-ok? tok-name tok-value
+            (error 'template-response-parser
+                   "Unexpected ~a at ~a:~a .. ~a:~a"
+                   (or tok-value tok-name)
                    (position-line start)
-                   (position-col start))))   
+                   (position-col start)
+                   (position-line end)
+                   (position-col end))))
    (tokens data delims)
    
    (grammar
