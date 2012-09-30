@@ -32,20 +32,29 @@ Note that only the `#` and `##` section/level syntax is supported
 (_not_ the style where you put an "underline" on the line following
 the setion title).
 
-Note that the templated subsections:
+Note that the special `Request` and `Response` templated subsections:
 
 1. Must be level 2 (`##`).
 
 2. Must be named exactly `Request:` and `Response:` respectively
    (although the trailing colon in optional).
 
-3. Must be in that order.
+3. Must be in that order -- `Request` first.
 
 4. Must be the final two subsections.
 
-5. The `Response` section is optional if this is to be used solely for
-   an FFI for a client, although it may be helpful for documentation
-   if the response includes special headers.
+5. The `Response` section is optional.
+
+   - **Client**: It may be omitted if this is to be used solely for an
+     FFI for a client, since an FFI will probably just take all the
+     response headers and put them in a dict (or whatever), and all
+     the interesting stuff is in the response entity (body). Even so,
+     it may be may be helpful to include the section for documentation
+     value, at least if the response includes special headers.
+
+   - **Server**: If this is to be used when implementing a server, the
+     `Response` section might be mandatory because a server framework
+     might use this template to assist preparing the HTTP response.
 
 ## Templated HTTP message
 
@@ -57,16 +66,18 @@ are normally required in an HTTP message:
 
 - You do not need to specify any body (entity).
 
-As another aid, a long series of query parameters may be split into
-multiple lines with indenting, following a common style
-(e.g. Amazon). For instance:
+A long series of query parameters may be split across multiple lines
+using indenting, following a common style (e.g. Amazon). For instance:
 
-    POST /some/path/
-      ?qp1=1
-      &qp2=2
-      &qp3=3
-    Date: blah blah blah
-    ... remainder of request ...
+````
+POST /some/path/
+     ?qp1=1
+     &qp2=2
+     &qp3=3
+Header0: Value0
+Header1: Value1
+   ... <remainder of request> ...
+````
 
 A request includes `Key Value` pairs in various places, such as the
 `Key=Value` query parameters and the `Key: Value` headers.  The
@@ -161,10 +172,10 @@ a={a}&b={b}
 
 # Create Domain
 
-> _Note_: This section is me cribbing some AWS SDB documentation. In
->  other words, creating this markdown file for an existing web service
->  should be _almost_ a copy-and-paste excercise. That's the idea,
->  anyway.
+> > _Note_: This section is me cribbing some AWS SDB documentation. In
+> >  other words, creating this markdown file for an existing web service
+> >  should be _almost_ a copy-and-paste excercise. That's the idea,
+> >  anyway.
 
 The CreateDomain operation creates a new domain. The domain name must
 be unique among the domains associated with the Access Key ID provided
