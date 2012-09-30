@@ -23,12 +23,12 @@
   (api? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
-      [(list k (list 'CONSTANT v)) (cons k v)]
-      [(list k (list 'VARIABLE v)) (cons k (format "~a" (dict-ref d v)))]
-      [(list 'OPTIONAL (list k (list 'VARIABLE v)))
+      [(keyval k (constant v)) (cons k v)]
+      [(keyval k (variable v)) (cons k (format "~a" (dict-ref d v)))]
+      [(optional (keyval k (variable v)))
        (cond [(dict-has-key? d v) (cons k (format "~a" (dict-ref d v)))]
              [else #f])]
-      [(list 'OPTIONAL (list k (list 'CONSTANT v)))
+      [(optional (keyval k (constant v)))
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
@@ -37,7 +37,7 @@
     (string-join (for/list ([x p])
                    (match x
                      [(? string? s) s]
-                     [(list 'VARIABLE k) (format "~a" (dict-ref d k))]
+                     [(variable k) (format "~a" (dict-ref d k))]
                      [else (error 'dict->request)]))
                  ""))
   (define query (alist->form-urlencoded (filter-map to-cons q)))

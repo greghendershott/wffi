@@ -1,10 +1,10 @@
 #lang racket
 
-(require "split.rkt"
-         )
+(require "key-value.rkt")
 
 (provide (struct-out api)
-         init-api)
+         init-api
+         (all-from-out "key-value.rkt"))
 
 (struct api
         (name        ;string?
@@ -12,16 +12,19 @@
          req         ;string?  Stored only for doc purposes
          resp        ;string?  Stored only for doc purposes
          route-px    ;pregexp?
-         req-method  ;list? parsed
-         req-path    ;list? parsed
-         req-query   ;list? parsed
-         req-head    ;list? parsed
-         resp-head   ;list? parsed
+         req-method  ;symbol?
+         req-path    ;(listof (or/c string? variable?))
+         req-query   ;(listof keyval?)
+         req-head    ;(listof keyval?)
+         resp-head   ;(listof keyval?)
         ) #:transparent)
 
 
-(define (init-api name desc req resp
-                  req-method req-path req-query req-head resp-head)
+(define/contract (init-api name desc req resp
+                           req-method req-path req-query req-head resp-head)
+  (string? string? string? string? symbol? (listof (or/c string? variable?))
+           (listof keyval/c) (listof keyval/c) (listof keyval/c)
+           . -> . api?)
   (api name desc req resp
        (route-px req-method req-path)
        req-method req-path req-query req-head resp-head))
@@ -34,7 +37,7 @@
     "\\s+"
     (string-join (for/list ([x req-path])
                    (match x
-                     [(list 'VARIABLE k) "(.+?)"]
+                     [(variable k) "(.+?)"]
                      [(? string? x) (regexp-quote x)]
                      [else (error 'init-api)]))
                  "")

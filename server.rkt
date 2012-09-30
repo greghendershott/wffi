@@ -59,16 +59,17 @@ a=1&b=2
   (api? dict? . -> . (values string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
-      [(list k (list 'CONSTANT v)) (cons k v)]
-      [(list k (list 'VARIABLE v)) (cons k (format "~a" (dict-ref d v)))]
-      [(list 'OPTIONAL (list k (list 'VARIABLE v)))
+      [(keyval k (constant v)) (cons k v)]
+      [(keyval k (variable v)) (cons k (format "~a" (dict-ref d v)))]
+      [(optional (keyval k (list 'VARIABLE v)))
        (cond [(dict-has-key? d v) (cons k (format "~a" (dict-ref d v)))]
              [else #f])]
-      [(list 'OPTIONAL (list k (list 'CONSTANT v)))
+      [(optional (keyval k (list 'CONSTANT v)))
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
   (define h (api-resp-head a))
+  (displayln h)
   (define status (format "HTTP/~a ~a ~a"
                          (dict-ref d 'HTTP-Ver "1.0")
                          (dict-ref d 'HTTP-Code "200")

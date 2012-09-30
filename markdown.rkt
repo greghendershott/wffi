@@ -42,25 +42,48 @@
                                        "# (.+?)\n+" ;name
                                        "(.*?)\n+"   ;desc
                                        "## (?i:Request):?\\s*\n"
+                                       ".*?"
                                        "````\n"
-                                       "(.+?)"   ;req
+                                       "(.+?)"      ;request
                                        "````\n"
-                                       "[^#]*?"
+                                       ".*?"
                                        "(?:"
                                          "## (?i:Response):?\\s*\n"
-                                         "````\n"
-                                         "(.*?)"   ;resp
-                                         "````\n"
-                                         ".*?"
-                                       ")?"
-                                       ".*?"
+                                          ".*?"
+                                          "````\n"
+                                          "(.+?)"   ;[response]
+                                          "````\n"
+                                          ".*?"
+                                       ")??"
                                        "$"
                                        )))
+
+;; (regexp-match
+;; px-api
+;; #<<--
+;; # Name
+
+;; Description.
+
+;; ## Request:
+;; ````
+;; request-template
+;; ````
+
+;; ## Response:
+;; ````
+;; response-template
+;; ````
+
+;; --
+;; )
+
 
 (define/contract (section->api sec)
   (string? . -> . (or/c #f api?))
   (match sec
-    [(pregexp px-api (list _ name doc req resp))
+    [(pregexp px-api (list _ name doc req _resp))
+     (define resp (or _resp ""))
      (match-define (list (list req-method (list req-path req-query) http-ver)
                          req-head
                          req-body)
@@ -107,8 +130,8 @@
 ;; (join-query-params "fooo\n&bar\n&foo")
 
 ;; ;; test
-;; (define as (markdown->apis (file->string "imgur.md")))
-;; as
+;; (define as (markdown->apis (file->string "example.md")))
+;; (first as)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; markdown

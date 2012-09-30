@@ -3,6 +3,7 @@
 (require parser-tools/lex
          (prefix-in : parser-tools/lex-sre)
          parser-tools/yacc
+         "key-value.rkt"
          )
 
 (provide parse-template-response)
@@ -62,10 +63,10 @@
            [(constant) $1])
 
     (variable
-     [(OPEN-BRACE DATUM CLOSE-BRACE) (list 'VARIABLE (string->symbol $2))]
-     [(OPEN-BRACE CLOSE-BRACE) (list 'VARIABLE)])
+     [(OPEN-BRACE DATUM CLOSE-BRACE) (variable (string->symbol $2))]
+     [(OPEN-BRACE CLOSE-BRACE) (variable #f)])
 
-    (constant [(DATUM) (list 'CONSTANT $1)])
+    (constant [(DATUM) (constant $1)])
     
     (response [(start-line heads body) (list $1 $2 $3)])
 
@@ -89,12 +90,12 @@
     ;; We won't get a CRLF token for the final head because the lexer
     ;; will consume that into the ENTITY token.
     (head
-     [(DATUM COLON) (list (string->symbol $1) (list 'CONSTANT ""))]
-     [(DATUM COLON WS head-value) (list (string->symbol $1) (list 'CONSTANT $4))]
-     [(DATUM COLON WS variable) (var-name $1 $4)]
+     [(DATUM COLON) (->keyval $1 (constant ""))]
+     [(DATUM COLON WS head-value) (->keyval $1 (constant $4))]
+     [(DATUM COLON WS variable) (->keyval $1 $4)]
      [(head WS) $1]
      [(head CRLF) $1]
-     [(OPEN-BRACKET head CLOSE-BRACKET) (list 'OPTIONAL $2)])
+     [(OPEN-BRACKET head CLOSE-BRACKET) (optional $2)])
 
     ;; Constant header values may contain spaces
     (head-value [(head-value-list) (apply string-append (reverse $1))])
@@ -108,11 +109,11 @@
 
     )))
 
-(define (var-name datum value)
-  (list (string->symbol datum) (match value
-                                 [(list 'VARIABLE)
-                                  (list 'VARIABLE (string->symbol datum))]
-                                 [else value])))
+(define (->keyval datum value)
+  (keyval (string->symbol datum)
+             (match value
+               [(variable #f) (variable (string->symbol datum))]
+               [else value])))
 
 (define (parse-template-response in)
   (port-count-lines! in)
