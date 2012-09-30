@@ -58,27 +58,6 @@
                                        "$"
                                        )))
 
-;; (regexp-match
-;; px-api
-;; #<<--
-;; # Name
-
-;; Description.
-
-;; ## Request:
-;; ````
-;; request-template
-;; ````
-
-;; ## Response:
-;; ````
-;; response-template
-;; ````
-
-;; --
-;; )
-
-
 (define/contract (section->api sec)
   (string? . -> . (or/c #f api?))
   (match sec
