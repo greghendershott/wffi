@@ -73,6 +73,14 @@
     (request [(start-line heads body) (list $1 $2 $3)]
              [(start-line heads) (list $1 $2 '())])
 
+    ;; TO-DO: Enhance this to allow spreading the start-line over
+    ;; multi lines, with the subsequent lines indented, until the
+    ;; first non-indented header line. Ex:
+    ;;
+    ;; (PUT /2/upload.json
+    ;;   ?key={}
+    ;;   &image={}
+    ;; Content-Length: 0
     (start-line
      [(method WS path+query WS http-ver CRLF) (list $1 $3 $5)]
      [(method WS path+query CRLF) (list $1 $3 "HTTP/1.0")])

@@ -2,6 +2,7 @@
 
 (require "api.rkt"
          "split.rkt"
+         "parse-markdown.rkt"
          "parse-request.rkt"
          "parse-response.rkt"
          )
@@ -13,15 +14,45 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define/contract (wffi-lib s)
+(define/contract (wffi-lib s)           ;truly markdown->wffi-lib
   (path-string? . -> . (listof api?))
-  (markdown->apis (file->string s)))
+  (call-with-input-file s mdfile->apis))
 
 (define/contract (wffi-obj lib name)
   ((listof api?) string? . -> . api?)
   (define a (findf (lambda (x) (string=? name (api-name x))) lib))
   (cond [a a]
         [else (error 'wffi-obj "can't find ~s" name)]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define/contract (mdfile->apis in)
+  (input-port? . -> . any #|(listof apis)|#)
+  (filter-map md-section-group->api (parse-markdown in)))
+
+(require parser-tools/lex)
+(define (md-section-group->api m)
+  (match m
+    [(md-section-group (md-section 1 name lines) subs)
+     (displayln name)
+     (match subs
+       [(list-no-order (md-section 2 (or "Request:" "Request")
+                                   (list-no-order (md-code-block beg end code)
+                                                  _ ...))
+                       _ ...)
+        (displayln code)
+        (let ([in (open-input-bytes code)])
+          (port-count-lines! in)
+          (set-port-next-location! in
+                                   (position-line beg)
+                                   (position-col beg)
+                                   (position-offset beg))
+          (displayln (parse-template-request in)))]
+       [else #f])
+     #f]
+    [else #f]))
+
+(wffi-lib "google-plus.md")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -38,7 +69,7 @@
      [else (cons (substring s (car xs) (cadr xs)) (loop (cdr xs)))])))
 
 ;; Pregexp for one section of a markdown file documenting one API.
-(define px-api (pregexp (string-append "^"
+(define px-api (pregexp (string-append ;;"^"
                                        "# (.+?)\n+" ;name
                                        "(.*?)\n+"   ;desc
                                        "## (?i:Request):?\\s*\n"
@@ -55,7 +86,7 @@
                                           "````\n"
                                           ".*?"
                                        ")??"
-                                       "$"
+                                       ;;"$"
                                        )))
 
 (define/contract (section->api sec)
