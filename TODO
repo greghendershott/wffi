@@ -1,11 +1,15 @@
-Some APIs to use as examples/tests:
+- Some APIs to use as examples/tests:
 
 [Google+](https://developers.google.com/+/api/)
 [Last.fm](http://www.last.fm/api/intro)
 [Imgur](http://api.imgur.com/)
 
 
-The markdown files could be shared as "recipes" ala Homebrew.
+- Better error-reporting from the parsers. Use regexp-match-positions
+  and set-port-next-location!.
 
-Easy to express the recipes as JSON, too. Whether with the request and
-responses in their pre-parsed form, or post-parsed form, or both.
+- The markdown files could be shared as "recipes" ala Homebrew.
+
+- Easy to express the recipes as JSON, too. Whether with the request
+  and responses in their pre-parsed form, or post-parsed form, or
+  both.
