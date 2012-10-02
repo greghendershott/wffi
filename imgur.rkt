@@ -36,20 +36,16 @@
 (define endpoint (make-parameter "https://api.imgur.com"))
 (define lib (wffi-lib "imgur.md"))
 
-(define stats (compose1 (lambda (x) (check-response 'stats x))
-                        (wffi-rest-proc lib "Stats" endpoint)))
+(define-syntax-rule (defproc name api-name)
+  (begin (define name (compose1 (lambda (x) (check-response #'name x))
+                                (wffi-rest-proc lib api-name endpoint)))
+         (provide name)))
 
-(define upload (compose1 (lambda (x) (check-response 'upload x))
-                         (wffi-rest-proc lib "Upload" endpoint)))
-
-(define album (compose1 (lambda (x) (check-response 'album x))
-                        (wffi-rest-proc lib "Album" endpoint)))
-
-(define image (compose1 (lambda (x) (check-response 'image x))
-                        (wffi-rest-proc lib "Image" endpoint)))
-(define delete (compose1 (lambda (x) (check-response 'delete x))
-                         (wffi-rest-proc lib "Delete Image" endpoint)))
-
+(defproc stats "Stats")
+(defproc upload "Upload")
+(defproc album "Album")
+(defproc image "Image")
+(defproc delete-image "Delete Image")
 
 (define (upload-uri uri name)
   (upload 'key (api-key)
@@ -62,6 +58,7 @@
 
 (stats) 
 (stats 'view "today")
+(stats 'view "week")
 
 (upload 'key (api-key) 'image "http://racket-lang.org/logo.png"
         'type "url" 'name "Racket logo")
