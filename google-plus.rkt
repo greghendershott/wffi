@@ -11,13 +11,14 @@
 (define api-key (make-parameter (read-api-key)))
 
 ;; A helper to take the response dict and check the status code. If
-;; 200, convert the bytes to a jsexpr. Else raise an error.
+;; 200, convert the bytes to a jsexpr (this is extremely Google+
+;; specific, not a role model for how to deal with other web services)
+;; else raise an error.
 (define (check-response who d)
   (define code (dict-ref d 'HTTP-Code))
   (cond [(= code 200) (bytes->jsexpr (dict-ref d 'entity))]
         [else (error who "HTTP Status ~a ~s\n~a"
                      code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
-
 
 (define (add-common-parameters h)
   (hash-set* h
