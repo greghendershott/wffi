@@ -1,4 +1,4 @@
-# Anonymous API
+# imgur.com Anonymous API
 
 Source: <http://api.imgur.com/resources_anon>
 
