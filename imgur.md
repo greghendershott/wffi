@@ -71,5 +71,5 @@ Delete an image.
 ## Request
 
 ````
-DELETE /2/delete/{hash}
+DELETE /2/delete/{deletehash}.json
 ````
