@@ -34,7 +34,6 @@
 (define (md-section-group->api m)
   (match m
     [(md-section-group (md-section 1 name docs) subs)
-     (displayln name)
      (define req (parse-req subs))
      (define resp (parse-resp subs))
      (cond
