@@ -8,8 +8,8 @@
 
 (provide parse-template-response)
 
-(define-tokens data (DATUM WS CRLF ENTITY))
-(define-empty-tokens delims (EQ COLON
+(define-tokens data (DATUM WS ENTITY))
+(define-empty-tokens delims (EQ LF COLON
                                 OPEN-BRACE CLOSE-BRACE
                                 OPEN-BRACKET CLOSE-BRACKET
                                 QUESTION AMPERSAND
@@ -25,13 +25,9 @@
    [#\] 'CLOSE-BRACKET]
    [#\? 'QUESTION]
    [#\& 'AMPERSAND]
+   [#\newline 'LF]
    ;; A double newline marks the start of the entity
-   [(:: (:or (:: #\newline #\newline)
-             (:: #\return #\return)
-             (:: #\return #\newline #\return #\newline))
-        any-string)
-    (token-ENTITY lexeme)]
-   [(:or "#\\return#\\newline" #\return #\newline) (token-CRLF lexeme)]
+   [(:: #\newline #\newline any-string) (token-ENTITY lexeme)]
    ;; Allow "line-joining" using indenting on following line:
    [(:: #\newline (:+ #\space))
     (return-without-pos (template-response-lexer input-port))]
@@ -61,6 +57,7 @@
                    (position-line end)
                    (position-col end))))
    (tokens data delims)
+   (suppress)
    
    (grammar
 
@@ -75,8 +72,8 @@
     
     (response [(start-line heads body) (list $1 $2 $3)])
 
-    (start-line [(http-ver WS code CRLF) (list $1 $3 "")]
-                [(http-ver WS code WS desc CRLF) (list $1 $3 $5)]
+    (start-line [(http-ver WS code LF) (list $1 $3 "")]
+                [(http-ver WS code WS desc LF) (list $1 $3 $5)]
                 [() '()])
     
     (http-ver [(DATUM) $1])
@@ -93,19 +90,21 @@
            [(heads head) (cons $2 $1)])
 
     (head
-     [(DATUM COLON) (->keyval $1 (constant ""))]
      [(DATUM COLON WS head-value) (->keyval $1 (constant $4))]
      [(DATUM COLON WS variable) (->keyval $1 $4)]
-     [(head WS) $1]
-     ;; We won't get a CRLF token for the final head because the lexer
-     ;; will consume that into the ENTITY token.
-     [(head CRLF) $1]
+     ;; We won't get a LF token for the final head because the lexer
+     ;; will consume that into the ENTITY token, but we will for the others.
+     [(head LF) $1]
      [(OPEN-BRACKET head CLOSE-BRACKET) (optional $2)])
 
     ;; Constant header values may contain spaces
     (head-value [(head-value-list) (apply string-append (reverse $1))])
     (head-value-token [(DATUM) $1]
-                      [(WS) $1])
+                      [(WS) $1]
+                      [(COLON) ":"]
+                      [(AMPERSAND) "&"]
+                      [(QUESTION) "?"]
+                      [(EQ) "="])
     (head-value-list [() '()]
                      [(head-value-list head-value-token) (cons $2 $1)])
 
@@ -127,14 +126,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; example
 
-#;
+#|
 (define str #<<--
 HTTP/1.1 404 Not Found
-Date: Today
-EmptyHeader:
+Date: Sun, Jan 1 1970 00:00:00UTC
 Header1: {}
 Header2: {Alias}
-ValueWithTrailingWhitespace: SpaceBeforeLF-> 
+ValueWithTrailingWhitespace: SpaceBeforeLF->
+[Optional-Header: Foo]
 Foo: Bar
 
 This is the body line 1.
@@ -155,8 +154,8 @@ Notice that tokens like :, &, ? are treated as normal chars here.
     (unless (eq? t 'EOF)
       (loop))))
 
-#;
 (let ([in (open-input-string str)])
   (displayln "PARSER==========")
   (port-count-lines! in)
   (template-response-parser (lambda () (template-response-lexer in))))
+|#
