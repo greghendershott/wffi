@@ -4,7 +4,6 @@
 [Last.fm](http://www.last.fm/api/intro)
 [Imgur](http://api.imgur.com/)
 
-
 - Better error-reporting from the parsers. Use regexp-match-positions
   and set-port-next-location!.
 
