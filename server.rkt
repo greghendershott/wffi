@@ -23,14 +23,12 @@
   (api? string? . -> . dict?)
   (define-values (m p q h e) (split-request s))
   (define pt (api-req-path a))
+  (displayln pt)
   (dict-merge
    (for/hash ([v (regexp-split #rx"/" p)]
-              [k pt] #:when (not (string? k)))
-     (values (cadr k) v))
+              [k pt] #:when (variable? k))
+     (values (variable-name k) v))
    (form-urlencoded->alist q)
-   ;; (for/hash ([x (regexp-split #rx"&" q)] #:when (not (string=? "" x)))
-   ;;   (match x [(pregexp "^(.+?)=(.+?)$" (list _ k v))
-   ;;             (values (string->symbol k) v)]))
    (heads-string->dict h)
    (cond [(regexp-match?
            #px"Content-Type\\s*:\\s*application/x-www-form-urlencoded"
@@ -40,7 +38,8 @@
                       (values (string->symbol k) v)]))]
          [else (hash)])))
 
-(define ex (first (markdown->apis (file->string "example.md"))))
+#;
+(define ex (wffi-obj (wffi-lib "example.md") "Example POST API"))
 
 #;
 (request->dict ex

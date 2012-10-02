@@ -49,8 +49,8 @@
   ;; (define body (alist->form-urlencoded (filter-map to-cons b)))
   (values method path+query heads #f))
 
-
-(define ex (first (markdown->apis (file->string "example.md"))))
+#;
+(define ex (wffi-obj (wffi-lib "example.md") "Example GET API"))
 #;
 (dict->request ex (hash 'user "Greg"
                         'item 1

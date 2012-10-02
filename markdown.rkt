@@ -33,7 +33,8 @@
 (require parser-tools/lex)
 (define (md-section-group->api m)
   (match m
-    [(md-section-group (md-section 1 name (list doc)) subs)
+    [(md-section-group (md-section 1 name docs) subs)
+     (displayln name)
      (define req (parse-req subs))
      (define resp (parse-resp subs))
      (cond
@@ -42,7 +43,7 @@
                            req-head
                            req-body) req)
        (match-define (list resp-stat resp-head resp-body) resp)
-       (init-api name doc "" "" ;;req resp
+       (init-api name (string-join docs "") "" "" ;;req resp
                  req-method req-path req-query req-head resp-head)]
       [else #f])]
     [else #f]))
@@ -77,7 +78,7 @@
     (f in)))
 
 ;; test
-(wffi-lib "example.md")
+;; (wffi-lib "example.md")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
