@@ -32,9 +32,12 @@
         any-string)
     (token-ENTITY lexeme)]
    [(:or "#\\return#\\newline" #\return #\newline) (token-CRLF lexeme)]
+   ;; Allow "line-joining" using indenting on following line:
+   [(:: #\newline (:+ #\space))
+    (return-without-pos (template-request-lexer input-port))]
    [whitespace (token-WS lexeme)]
-   ;; In the following, it seems necessary to duplicate the list above in
-   ;; a ~ expression. Really???
+   ;; In the following, it seems necessary to duplicate the list
+   ;; above, in a ~ expression. Really???
    [(:+ (:~ (:or #\= #\:
                  #\{ #\}
                  #\[ #\]
@@ -73,14 +76,6 @@
     (request [(start-line heads body) (list $1 $2 $3)]
              [(start-line heads) (list $1 $2 '())])
 
-    ;; TO-DO: Enhance this to allow spreading the start-line over
-    ;; multi lines, with the subsequent lines indented, until the
-    ;; first non-indented header line. Ex:
-    ;;
-    ;; (PUT /2/upload.json
-    ;;   ?key={}
-    ;;   &image={}
-    ;; Content-Length: 0
     (start-line
      [(method WS path+query WS http-ver CRLF) (list $1 $3 $5)]
      [(method WS path+query CRLF) (list $1 $3 "HTTP/1.0")])
@@ -111,13 +106,13 @@
     (heads [() '()]
            [(heads head) (cons $2 $1)])
 
-    ;; We won't get a CRLF token for the final head because the lexer
-    ;; will consume that into the ENTITY token.
     (head
      [(DATUM COLON) (->keyval $1 (constant ""))]
      [(DATUM COLON WS head-value) (->keyval $1 (constant $4))]
      [(DATUM COLON WS variable) (->keyval $1 $4)]
      [(head WS) $1]
+     ;; We won't get a CRLF token for the final head because the lexer
+     ;; will consume that into the ENTITY token.
      [(head CRLF) $1]
      [(OPEN-BRACKET head CLOSE-BRACKET) (optional $2)])
 
@@ -148,7 +143,7 @@
 #;
 (define str #<<--
 GET /users/{user}/items/{item}?a={}&[b=2] HTTP/1.1
-Date: {}f
+Date: {}
 Header: Constant value with whitespace
 Authorization: {}
 Aliased: {optional-alias}
@@ -181,4 +176,3 @@ Notice that tokens like :, &, ? are treated as normal chars here.
   (displayln "PARSER==========")
   (port-count-lines! in)
   (template-request-parser (lambda () (template-request-lexer in))))
-

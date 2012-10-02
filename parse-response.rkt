@@ -32,9 +32,12 @@
         any-string)
     (token-ENTITY lexeme)]
    [(:or "#\\return#\\newline" #\return #\newline) (token-CRLF lexeme)]
+   ;; Allow "line-joining" using indenting on following line:
+   [(:: #\newline (:+ #\space))
+    (return-without-pos (template-response-lexer input-port))]
    [whitespace (token-WS lexeme)]
-   ;; In the following, it seems necessary to duplicate the list above in
-   ;; a ~ expression. Really???
+   ;; In the following, it seems necessary to duplicate the list
+   ;; above, in a ~ expression. Really???
    [(:+ (:~ (:or #\= #\:
                  #\{ #\}
                  #\[ #\]
@@ -89,13 +92,13 @@
     (heads [() '()]
            [(heads head) (cons $2 $1)])
 
-    ;; We won't get a CRLF token for the final head because the lexer
-    ;; will consume that into the ENTITY token.
     (head
      [(DATUM COLON) (->keyval $1 (constant ""))]
      [(DATUM COLON WS head-value) (->keyval $1 (constant $4))]
      [(DATUM COLON WS variable) (->keyval $1 $4)]
      [(head WS) $1]
+     ;; We won't get a CRLF token for the final head because the lexer
+     ;; will consume that into the ENTITY token.
      [(head CRLF) $1]
      [(OPEN-BRACKET head CLOSE-BRACKET) (optional $2)])
 
