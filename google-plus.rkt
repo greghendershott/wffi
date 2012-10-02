@@ -37,14 +37,14 @@
 (define endpoint (make-parameter "https://www.googleapis.com"))
 (define lib (wffi-lib "google-plus.md"))
 
-(define (make-proc name who)
-  (compose1 (lambda (x) (check-response who x))
-            (wffi-dict-proc lib name endpoint)
-            add-common-parameters
-            hash))
+(define (chain . fs)
+  (apply compose1 (reverse fs)))
 
 (define-syntax-rule (defproc name api-name)
-  (begin (define name (make-proc api-name #'name))
+  (begin (define name (chain hash
+                             add-common-parameters
+                             (wffi-dict-proc lib api-name endpoint)
+                             (lambda (x) (check-response (syntax-e #'name) x))))
          (provide name)))
 
 (defproc get-person "Get person")
@@ -54,9 +54,10 @@
 
 ;; examples:
 
-#;
+#|
+
 (get-person 'userId "107023078912536369392")
-#;
+
 (search-people 'query "John McCarthy")
 
 (define (show-post-activity user-id)
@@ -75,5 +76,6 @@
           title
           (length (dict-ref plus-oners 'items))
           (length (dict-ref resharers 'items)))))
-#;
 (show-post-activity "107023078912536369392")
+
+|#
