@@ -43,18 +43,16 @@ GET /plus/v1/people
 If successful, this method returns a response body with the following
 structure:
 
-````X
-{
-  "kind": "plus#peopleFeed",
-  "etag": etag,
-  "selfLink": string,
-  "title": string,
-  "nextPageToken": string,
-  "items": [
-    people Resource
-  ]
-}
-````
+    {
+      "kind": "plus#peopleFeed",
+      "etag": etag,
+      "selfLink": string,
+      "title": string,
+      "nextPageToken": string,
+      "items": [
+        people Resource
+      ]
+    }
 
 `kind` `string`: Identifies this resource as a collection of
 people. Value: "plus#peopleFeed".
@@ -114,18 +112,16 @@ Response
 If successful, this method returns a response body with the following
 structure:
 
-````X
-{
-  "kind": "plus#peopleFeed",
-  "etag": etag,
-  "selfLink": string,
-  "title": string,
-  "nextPageToken": string,
-  "items": [
-    people Resource
-  ]
-}
-````
+    {
+      "kind": "plus#peopleFeed",
+      "etag": etag,
+      "selfLink": string,
+      "title": string,
+      "nextPageToken": string,
+      "items": [
+        people Resource
+      ]
+    }
 
 # Activity list
 
