@@ -27,11 +27,15 @@
 (define endpoint (make-parameter "http://ws.audioscrobbler.com"))
 (define lib (wffi-lib "last.fm.md"))
 
-(define chart (compose1 (lambda (x) (check-response 'chart x))
-                        (wffi-rest-proc lib "Chart" endpoint)))
+(define-syntax-rule (defproc name api-name)
+  (begin (define name (compose1 (lambda (x) (check-response #'name x))
+                                (wffi-rest-proc lib api-name endpoint)))
+         (provide name)))
+
+(defproc chart "Chart")
 
 ;; Examples
-
+#|
 (chart 'api-key (api-key)
        'method "chart.getHypedArtists"
        'limit 1)
@@ -39,3 +43,4 @@
 (chart 'api-key (api-key)
        'method "chart.getLovedTracks"
        'limit 1)
+|#
