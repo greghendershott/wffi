@@ -3,16 +3,12 @@
 (require wffi/client
          json)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (read-api-key [file (build-path (find-system-path 'home-dir)
                                         ".imgur-api-key")])
   (match (file->string file #:mode 'text)
     [(regexp "^\\s*(.*?)\\s*(?:[\r\n]*)$" (list _ k)) k]
     [else (error 'read-api-key "Bad format for ~a" file)]))
 (define api-key (make-parameter (read-api-key)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; A helper to take the response dict and check the status code. If
 ;; 200, convert the bytes to a jsexpr. Else raise an error.
@@ -25,20 +21,27 @@
         [else (error who "HTTP Status ~a ~s\n~a"
                      code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
                      
+(define (add-common-parameters h)
+  (hash-set* h
+             'key (api-key)))
+
 ;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
 (define (dict-refs d . ks)
   (for/fold ([d d])
             ([k ks])
     (dict-ref d k)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define endpoint (make-parameter "https://api.imgur.com"))
 (define lib (wffi-lib "imgur.md"))
 
+(define (chain . fs)
+  (apply compose1 (reverse fs)))
+
 (define-syntax-rule (defproc name api-name)
-  (begin (define name (compose1 (lambda (x) (check-response #'name x))
-                                (wffi-rest-proc lib api-name endpoint)))
+  (begin (define name (chain hash
+                             add-common-parameters
+                             (wffi-dict-proc lib api-name endpoint)
+                             (lambda (x) (check-response (syntax-e #'name) x))))
          (provide name)))
 
 (defproc stats "Stats")
@@ -48,8 +51,7 @@
 (defproc delete-image "Delete Image")
 
 (define (upload-uri uri name)
-  (upload 'key (api-key)
-          'image uri
+  (upload 'image uri
           'type "url"
           'name name))
 
@@ -67,14 +69,16 @@
 (album 'hash 2)
 (image 'hash 2)
 
-;; Upload an image, get its "hash" ID from the response, and pass that
-;; to `image` to see the attributes:
-(define h (dict-refs (upload-uri "http://racket-lang.org/logo.png" "Racket logo")
-                     'upload 'image 'hash))
-(image 'hash h)
-
-;; This isn't working. Getting 400 Bad Request:
-(delete 'hash "oWuf6")
+;; Upload an image, get its "hash" and "deletehash" ID from the
+;; response, pass hash to `image` to see the attributes, and pass
+;; deletehash to `delete-hash` to delete it.
+(let* ([js (upload-uri "http://racket-lang.org/logo.png" "Racket logo")]
+       [h (dict-refs js 'upload 'image 'hash)]
+       [dh (dict-refs js 'upload 'image 'deletehash)])
+  (displayln "Image uploaded. Get its attributes:")
+  (pretty-print (image 'hash h))
+  (displayln "Deleting it:")
+  (delete-image 'deletehash dh))
 
 |#
 
