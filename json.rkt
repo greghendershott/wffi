@@ -13,7 +13,7 @@
       [(variable x) (hasheq 'variable (symbol->string x))]
       [else x]))
 
-  (match-define (api name desc _ _ _ method path query head resp-head) a)
+  (match-define (api name desc _ method path query head resp-head) a)
   (hasheq 'name name
           'desc desc
           'request-method (symbol->string method)
@@ -34,8 +34,6 @@
 
   (init-api (hash-ref j 'name)
             (hash-ref j 'desc)
-            ""
-            ""
             (string->symbol (hash-ref j 'request-method))
             (map ->a (hash-ref j 'request-path))
             (map ->a (hash-ref j 'request-query))
