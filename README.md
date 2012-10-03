@@ -155,45 +155,34 @@ message.
 
 There are four permutations of constant vs. variable and required
 vs. optional. Each permutation is discussed from the point of view of
-a server and an FFI for clients. The notaton below uses just
+a server and an FFI for clients. The notation below uses just
 `Key=Value` as for query parameters, but equally applies to
-`Key: Value` query parameters.
+`Key: Value` headers.
 
 - `Key=Value` means that the header or parameter is a **constant**.
-
   - Server: Requires it to be supplied literally with the value
     `Value`.
-  
   - Client: Must supply it literally. For convenience an FFI should
     supply it for a client automatically.
-
 - `Key={}` _or_ `Key={alias}` means that the header or parameter is
    **variable**.
-
   - Server: Requires _some_ value to be supplied.
-
   - Client: An FFI must require client to supply some value. In the
     client code, the name (e.g. dict key or keyword arg) is `K` when
     `{}`, otherwise `alias`. (In other words a long header name can be
     given a shorter alias.)
-
 - `[Key=Value]` means that the **constant** header or parameter is
   **optional**.
-
   - Server: When the header or parameter is not supplied in the
     request, the server will assume the constant value `Value` had
     been supplied.
-
   - Client: When the client doesn't supply anything, the FFI will
     automatically supply `Key=Value` to the server.  (If the client
     wants to supply a value, it must use the name `Key`; in this
     variant there is no alias.)
-
 - `[Key={}]` _or_ `[Key={alias}]` means that the **variable** header or
   parameter is **optional**.
-
   - Server: Will assume no particular value if not supplied.
-
   - Client: The client may supply this or not.
 
 The following request template has examples of these:
