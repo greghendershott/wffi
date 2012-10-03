@@ -68,7 +68,7 @@ asdfasdfasdf
 ;; Use the api to receive requests as a server and dispatch them.
 
 (require (planet gh/http))
-(define lib (wffi-lib "example.md"))
+(define lib (wffi-lib "../README.md"))
 (register-api! (wffi-obj lib "Example GET API")
                (lambda (d)
                  (hash 'Status "200 OK"
