@@ -1,6 +1,7 @@
 #lang racket
 
-(require "api.rkt"
+(require parser-tools/lex
+         "api.rkt"
          "split.rkt"
          "parse-markdown.rkt"
          "parse-request.rkt"
@@ -11,8 +12,6 @@
          wffi-obj
          markdown->apis
          api->markdown)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define current-source (make-parameter ""))
 
@@ -27,28 +26,23 @@
   (cond [a a]
         [else (error 'wffi-obj "can't find ~s" name)]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define/contract (markdown->apis in)
-  (input-port? . -> . any #|(listof apis)|#)
+  (input-port? . -> . (listof api?))
   (filter-map md-section-group->api (parse-markdown in)))
 
-(require parser-tools/lex)
 (define (md-section-group->api m)
   (match m
     [(md-section-group (md-section 1 name docs) subs)
      (define req (parse-req subs))
      (define resp (parse-resp subs))
-     (cond
-      [req
-       (match-define (list (list req-method (list req-path req-query) http-ver)
-                           req-head
-                           req-body) req)
-       (match-define (list resp-stat resp-head resp-body) resp)
-       (init-api name (string-join docs "")
-                 req-method req-path req-query req-head resp-head)]
-      [else #f])]
-    [else #f]))
+     (cond [req
+            (match-define (list (list req-method (list req-path req-query) ver)
+                                req-head req-body) req)
+            (match-define (list resp-stat resp-head resp-body) resp)
+            (init-api name (string-join docs "")
+                      req-method req-path req-query req-head resp-head)]
+           [else #f])]  ;ignore this section
+    [else #f]))         ;ignore this section
 
 (define (parse-req subs)
   (match subs
@@ -69,18 +63,22 @@
      (call-parser parse-template-response code beg)]
     [else '(() () ())]))
 
+;; Cqll the parser `f` on the `code`, setting the port location to
+;; `pos` so that error reporting will be for the the containing file
+;; from which we got the code. Also uses the `current-source`
+;; parameter which is the name of teh source file.
 (define/contract (call-parser f code pos)
   (procedure? bytes? position? . -> . any)
-  (let ([in (open-input-bytes code)])
-    (port-count-lines! in)
-    (set-port-next-location! in
-                             (position-line pos)
-                             (position-col pos)
-                             (position-offset pos))
-    (f (current-source) in)))
+  (define in (open-input-bytes code))
+  (port-count-lines! in)
+  (set-port-next-location! in
+                           (position-line pos)
+                           (position-col pos)
+                           (position-offset pos))
+  (f (current-source) in))
 
-;; test
-(wffi-lib "example.md")
+;; ;; test
+;; (wffi-lib "examples/example.md")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
