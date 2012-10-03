@@ -15,7 +15,7 @@
 
   (match-define (api name desc _ method path query head resp-head) a)
   (hasheq 'name name
-          'desc desc
+          'docs docs
           'request-method (symbol->string method)
           'request-path (map ->js path)
           'request-query (map ->js query)
@@ -33,7 +33,7 @@
       [(hash-table (k v)) (keyval k (->a v))]))
 
   (init-api (hash-ref j 'name)
-            (hash-ref j 'desc)
+            (hash-ref j 'docs)
             (string->symbol (hash-ref j 'request-method))
             (map ->a (hash-ref j 'request-path))
             (map ->a (hash-ref j 'request-query))
