@@ -18,9 +18,9 @@ it easier to structure requests and to destructure responses.
 service. Making it easier to route and destructure requests and
 to stucture responses.
 
-Although this project provides a Racket language parser, FFI, and
-service framework, the markdown format is not specific to any
-programming language or style.
+This project implements a Racket language parser, FFI, and service
+framework. However the markdown layout and message template is not
+specific to any programming language or style.
 
 
 # Quick Start
@@ -53,8 +53,10 @@ specification, it must use a certain format:
 
     ````
     GET /user/{user}/items/{item}
-        ?qa={}
-        &[qb={}]
+        ?query-param={}
+        &[optional-query-param={}]
+        &constant-query-param=1
+        &[optional-constant-query-param=1]
     Header: {}
     Header-With-Alias: {alias}
     Header-With-Contant-Value: Constant Value
@@ -67,7 +69,7 @@ specification, it must use a certain format:
     
     If you need a code block in this section that is _not_ the
     template, then use the other code block style -- indenting with
-    four spaces.
+    four spaces:
     
         Here's a code block using
         the indented spaces style.
