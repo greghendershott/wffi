@@ -118,30 +118,28 @@ GET /2.0/
 `startTimestamp` and `endTimestamp` are
 [UNIX timestamps](http://en.wikipedia.org/wiki/Unix_time).
 
-
  `method` can be:
-
-`user.getArtistTracks`
-`user.getBannedTracks`
-`user.getEvents`
-`user.getFriends`
-`user.getInfo`
-`user.getLovedTracks`
-`user.getNeighbours`
-`user.getNewReleases`
-`user.getPastEvents`
-`user.getPersonalTags`
-`user.getPlaylists`
-`user.getRecentStations`
-`user.getRecentTracks`
-`user.getRecommendedArtists`
-`user.getRecommendedEvents`
-`user.getShouts`
-`user.getTopAlbums`
-`user.getTopArtists`
-`user.getTopTags`
-`user.getTopTracks`
-`user.getWeeklyAlbumChart`
-`user.getWeeklyArtistChart`
-`user.getWeeklyChartList`
-`user.getWeeklyTrackChart`
+- `user.getArtistTracks`
+- `user.getBannedTracks`
+- `user.getEvents`
+- `user.getFriends`
+- `user.getInfo`
+- `user.getLovedTracks`
+- `user.getNeighbours`
+- `user.getNewReleases`
+- `user.getPastEvents`
+- `user.getPersonalTags`
+- `user.getPlaylists`
+- `user.getRecentStations`
+- `user.getRecentTracks`
+- `user.getRecommendedArtists`
+- `user.getRecommendedEvents`
+- `user.getShouts`
+- `user.getTopAlbums`
+- `user.getTopArtists`
+- `user.getTopTags`
+- `user.getTopTracks`
+- `user.getWeeklyAlbumChart`
+- `user.getWeeklyArtistChart`
+- `user.getWeeklyChartList`
+- `user.getWeeklyTrackChart`
