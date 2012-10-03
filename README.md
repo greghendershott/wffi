@@ -8,14 +8,13 @@ specification".
 
 The same markdown file can be used for any/all of three purposes:
 
-1. Used as-is for publishable documentation of the web service. It can
-_be_ the documentation, period.
+1. Used verbatim as the publishable documentation of the web service.
 
-2. Parsed to support an FFI for clients using the web service. Making
+2. Parsed to support an FFI for clients to use the web service. Making
 it easier to structure requests and to destructure responses.
 
-3. Parsed to support web service framework for servers using the
-service. Making it easier to route and destructure requests and
+3. Parsed to support a web service framework for servers to provide
+the service. Making it easier to route and destructure requests and
 to stucture responses.
 
 This project implements a Racket language parser, FFI, and service
@@ -299,5 +298,32 @@ POST /
 Date: {}
 ````
 
-## Response:
+---
+---
+---
 
+# Racket-specific
+
+## wffi-lib and wffi-obj
+
+From `markdown.rkt`:
+
+Given the pathname of a markdown file, `wffi-lib` parses the file into
+a `(listof api?)`, where each `api` corresponds to one web service
+function.
+
+Given a `wffi-lib` and a `string` name, `wffi-obj` finds a function by
+name.
+
+## FFI for a client
+
+From `client.rkt`:
+
+Given a `wffi-lib` and the name of a function, `wffi-dict-proc`
+returns a `procedure` to call that web service function.  The
+procedure takes a `dict` of inputs, makes the HTTP request, and
+returns a `dict` of results.
+
+## Framework for a server
+
+See `server.rkt` for a barebones web service framework.
