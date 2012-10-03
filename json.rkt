@@ -3,6 +3,9 @@
 (require json
          "api.rkt")
 
+(provide api->jsexpr
+         jsexpr->api)
+
 (define/contract (api->jsexpr a)
   (api? . -> . jsexpr?)
   (define (->js x)
@@ -13,7 +16,7 @@
       [(variable x) (hasheq 'variable (symbol->string x))]
       [else x]))
 
-  (match-define (api name desc _ method path query head resp-head) a)
+  (match-define (api name docs _ method path query head resp-head) a)
   (hasheq 'name name
           'docs docs
           'request-method (symbol->string method)
