@@ -1,7 +1,6 @@
-# Introduction
+# wffi: An FFI for web services
 
-The gist: A web service is both documented and specified using a
-markdown file.
+A web service is both documented and specified using a markdown file.
 
 Like "literate programming", this is "literate web service
 specification".
