@@ -43,15 +43,16 @@
    [(eof) 'EOF]
    ))
 
-(define template-request-parser
+(define (template-request-parser source)
   (parser
    (start request)
    (end EOF)
    (src-pos)
    (error (lambda (tok-ok? tok-name tok-value start end)
             (error 'template-response-parser
-                   "Unexpected ~a at ~a:~a .. ~a:~a"
+                   "Unexpected ~a at ~a:~a:~a .. ~a:~a"
                    (or tok-value tok-name)
+                   source
                    (position-line start)
                    (position-col start)
                    (position-line end)
@@ -132,9 +133,10 @@
             [(variable #f) (variable (string->symbol datum))]
             [else value])))
 
-(define (parse-template-request in)
+(define/contract (parse-template-request source in)
+  (string? input-port? . -> . any)
   (port-count-lines! in)
-  (template-request-parser (lambda () (template-request-lexer in))))
+  ((template-request-parser source) (lambda () (template-request-lexer in))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; example
