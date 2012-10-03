@@ -1,14 +1,24 @@
-- Some APIs to use as examples/tests:
+- Finish fleshing out the Imgur, G+, and last.fm services in examples/
 
-[Google+](https://developers.google.com/+/api/)
-[Last.fm](http://www.last.fm/api/intro)
-[Imgur](http://api.imgur.com/)
+- Try doing some services that require authentication.
 
-- Better error-reporting from the parsers. Use regexp-match-positions
-  and set-port-next-location!.
+- Try some AWS services with an Authoriziation header that requires
+  calcuulating a signature based on other request elements. Allow a
+  dict value to be a `lambda`, which is called with the dictionary
+  after all non-lambda values are present??
 
-- The markdown files could be shared as "recipes" ala Homebrew.
+- Currently the `.md` files are needed at runtime, and parsed at
+  runtime. Is this a feature or a bug? If a bug, how to handle:
 
-- Easy to express the recipes as JSON, too. Whether with the request
-  and responses in their pre-parsed form, or post-parsed form, or
-  both.
+  - Is it possible do all this at the macro stage?
+
+  - Should there be a `#lang wffi`?  (Only downside is putting a first
+    #lang line changes this to be Racket-specific instead of
+    universal.)
+
+- Woolly ideas:
+
+  - The markdown files could be shared as "recipes" ala Homebrew?
+
+  - Should a JSON parse live on servers to be retrieved
+    programatically?
