@@ -14,9 +14,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define/contract (wffi-lib s)           ;truly markdown->wffi-lib
+(define current-source (make-parameter ""))
+
+(define/contract (wffi-lib s)
   (path-string? . -> . (listof api?))
-  (call-with-input-file s markdown->apis))
+  (parameterize ([current-source s])
+    (call-with-input-file s markdown->apis)))
 
 (define/contract (wffi-obj lib name)
   ((listof api?) string? . -> . api?)
@@ -42,7 +45,7 @@
                            req-head
                            req-body) req)
        (match-define (list resp-stat resp-head resp-body) resp)
-       (init-api name (string-join docs "") "" "" ;;req resp
+       (init-api name (string-join docs "")
                  req-method req-path req-query req-head resp-head)]
       [else #f])]
     [else #f]))
@@ -74,10 +77,10 @@
                              (position-line pos)
                              (position-col pos)
                              (position-offset pos))
-    (f in)))
+    (f (current-source) in)))
 
 ;; test
-;; (wffi-lib "example.md")
+(wffi-lib "example.md")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -88,15 +91,6 @@
   (string-append "# " (api-name x) "\n"
                  "\n"
                  (api-desc x) "\n"
-                 "\n"
-                 "## Request:\n"
-                 "\n"
-                 (api-req x) "\n"
-                 "\n"
-                 "## Response:\n"
-                 "\n"
-                 (api-resp x) "\n"
-                 "\n"
                  ))
 
 ;; Return documentation for the API, in Scribble format.

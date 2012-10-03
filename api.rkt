@@ -9,8 +9,6 @@
 (struct api
         (name        ;string?
          desc        ;string?
-         req         ;string?  Stored only for doc purposes
-         resp        ;string?  Stored only for doc purposes
          route-px    ;pregexp?
          req-method  ;symbol?
          req-path    ;(listof (or/c string? variable?))
@@ -20,12 +18,12 @@
         ) #:transparent)
 
 
-(define/contract (init-api name desc req resp
+(define/contract (init-api name desc
                            req-method req-path req-query req-head resp-head)
-  (string? string? string? string? symbol? (listof (or/c string? variable?))
+  (string? string? symbol? (listof (or/c string? variable?))
            (listof keyval/c) (listof keyval/c) (listof keyval/c)
            . -> . api?)
-  (api name desc req resp
+  (api name desc
        (route-px req-method req-path)
        req-method req-path req-query req-head resp-head))
      
