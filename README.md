@@ -52,15 +52,10 @@ specification, it must use a certain format:
 
     ````
     GET /user/{user}/items/{item}
-        ?query-param={}
-        &[optional-query-param={}]
-        &constant-query-param=1
-        &[optional-constant-query-param=1]
-    Header: {}
-    Header-With-Alias: {alias}
-    Header-With-Contant-Value: Constant Value
-    [Optional-Header-With-Variable-Value: {}]
-    [Optional-Header-With-Contant-Value: 10000]
+        ?qp1={}
+        &[qp2={}]
+    Header1: {}
+    Header2: {alias}
     ````
     
     Other than the code block, the rest of the section is purely for
@@ -161,32 +156,61 @@ message.
 
 There are four permutations of constant vs. variable and required
 vs. optional. Each permutation is discussed from the point of view of
-a server and an FFI for clients:
+a server and an FFI for clients. The notaton below uses just
+`Key=Value` as for query parameters, but equally applies to
+`Key: Value` query parameters.
 
-- `K: V` means that the header or parameter is a **constant**. Server
-  requires it to be supplied literally. An FFI should supply it for a
-  client automatically.
+- `Key=Value` means that the header or parameter is a **constant**.
 
-- `K: {}` _or_ `K: {alias}` means that a header or parameter is
-  **variable**.  Server requires _some_ value to be supplied. An FFI must
-  require client to supply some value under a name (in a dict or as a
-  keyword arg). The name is `K` when `{}`, otherwise `alias`. (In other
-  words a long header name can be given a shorter alias.)
+  - Server: Requires it to be supplied literally with the value
+    `Value`.
+  
+  - Client: Must supply it literally. For convenience an FFI should
+    supply it for a client automatically.
 
-- `[K: V]` means that the **constant** header or parameter is
-  **optional**. Server will assume the value `V` when not supplied. FFI
-  will supply `K: V` automatically unless the client supplies another
-  value under the name `K`.  (In this case, no ability to alias the name
-  `K`.)
+- `Key={}` _or_ `Key={alias}` means that the header or parameter is
+   **variable**.
 
-- `[K: {}]` _or_ `[K: {alias}]` means that the **variable** header or
-  parameter is **optional**. Server will assume no particular value if not
-  supplied. FFI will suppply `K: V` if the client has supplied it,
-  otherwise it will supply nothing at all to the server.
+  - Server: Requires _some_ value to be supplied.
 
-The notaton above is `K: V` as for headers, but all of the above
-applies to `K=V` query parameters, too.
+  - Client: An FFI must require client to supply some value. In the
+    client code, the name (e.g. dict key or keyword arg) is `K` when
+    `{}`, otherwise `alias`. (In other words a long header name can be
+    given a shorter alias.)
 
+- `[Key=Value]` means that the **constant** header or parameter is
+  **optional**.
+
+  - Server: When the header or parameter is not supplied in the
+    request, the server will assume the constant value `Value` had
+    been supplied.
+
+  - Client: When the client doesn't supply anything, the FFI will
+    automatically supply `Key=Value` to the server.  (If the client
+    wants to supply a value, it must use the name `Key`; in this
+    variant there is no alias.)
+
+- `[Key={}]` _or_ `[Key={alias}]` means that the **variable** header or
+  parameter is **optional**.
+
+  - Server: Will assume no particular value if not supplied.
+
+  - Client: The client may supply this or not.
+
+The following request template has examples of these:
+
+````
+GET /user/{user}/items/{item}
+    ?query-param={}
+    &[optional-query-param={}]
+    &constant-query-param=1
+    &[optional-constant-query-param=1]
+Header: {}
+Header-With-Alias: {alias}
+Header-With-Contant-Value: Constant Value
+[Optional-Header-With-Variable-Value: {}]
+[Optional-Header-With-Contant-Value: 10000]
+````
 
 ## BNF for templated requests
 
