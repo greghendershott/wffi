@@ -4,24 +4,37 @@
          (prefix-in : parser-tools/lex-sre)
          parser-tools/yacc)
 
-(struct md-section-group (self subsections) #:transparent)
-(struct md-section (level title content) #:transparent)
-(struct md-code-block (start-pos end-pos text) #:transparent)
-
 (provide parse-markdown
          (struct-out md-section-group)
          (struct-out md-section)
          (struct-out md-code-block))
+
+;; Why use a lexer and parser on a markdown file -- couldn't some
+;; clever regexps suffice?  Sure, but the main advatange is error
+;; reporting. For errors in the markdown itself. But also for errors
+;; in fragments that we extract (such as the request and response
+;; templates) and give to another parser. We can use the position info
+;; from the markdown file to set the port location when parsing the
+;; portions. The resulting error messages will pinpoint the location
+;; in the overall markdown file.
+
+(struct md-section-group (self subsections) #:transparent)
+(struct md-section (level title content) #:transparent)
+(struct md-code-block (start-pos end-pos text) #:transparent)
 
 (define-tokens data (DATUM WS CODEBLOCK SECTION1 SECTION2+))
 (define-empty-tokens delim (LF EOF))
 
 (define markdown-lexer
   (lexer-src-pos
+   ;; Most robust to define sections as including the preceding
+   ;; newline as well as the one or more # chars:
    [(:: #\newline (:+ #\#))
     (let ([n (string-length (substring lexeme 1))])
       (cond [(= 1 n) (token-SECTION1 1)]
             [else (token-SECTION2+ n)]))]
+   ;; Of course that leaves the special case of a section at the exact
+   ;; start of the entire file, which we handle here:
    [(::           (:+ #\#))
     (cond [(and (= 1 (position-line start-pos))
                 (= 0 (position-col start-pos)))
@@ -29,6 +42,10 @@
              (cond [(= 1 n) (token-SECTION1 1)]
                    [else (token-SECTION2+ n)]))]
           [else (token-DATUM lexeme)])]
+   ;; For codeblocks, we want to save and return the exact position of
+   ;; the code itself. That way, if this code is passed to another
+   ;; parser, the position can be used with `set-port-next-location!`
+   ;; for pinpoint error reporting.
    [(:: "````\n" (:* (:~ "`")) "````")
     (token-CODEBLOCK (md-code-block
                       ;; adjust start-pos to exclude leading ````\n
