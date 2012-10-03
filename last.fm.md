@@ -97,3 +97,51 @@ GET /2.0/
 - `event.getAttendees`
 - `event.getInfo`
 - `event.getShouts`
+
+# User
+
+## Request
+
+````
+GET /2.0/
+    ?format=json
+    &method={}
+    &user={}
+    &[artist={}]
+    &[startTimestamp={}]
+    &[endTimestamp={}]
+    &[page=1]
+    &[limit={}]
+    &api_key={api-key}
+````
+
+`startTimestamp` and `endTimestamp` are
+[UNIX timestamps](http://en.wikipedia.org/wiki/Unix_time).
+
+
+ `method` can be:
+
+`user.getArtistTracks`
+`user.getBannedTracks`
+`user.getEvents`
+`user.getFriends`
+`user.getInfo`
+`user.getLovedTracks`
+`user.getNeighbours`
+`user.getNewReleases`
+`user.getPastEvents`
+`user.getPersonalTags`
+`user.getPlaylists`
+`user.getRecentStations`
+`user.getRecentTracks`
+`user.getRecommendedArtists`
+`user.getRecommendedEvents`
+`user.getShouts`
+`user.getTopAlbums`
+`user.getTopArtists`
+`user.getTopTags`
+`user.getTopTracks`
+`user.getWeeklyAlbumChart`
+`user.getWeeklyArtistChart`
+`user.getWeeklyChartList`
+`user.getWeeklyTrackChart`

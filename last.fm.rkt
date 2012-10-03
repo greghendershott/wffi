@@ -51,10 +51,10 @@
 (defproc artist "Artist")
 (defproc album "Album")
 (defproc event "Event")
+(defproc user "User")
 
 ;; Examples
 #|
-
 (chart 'method "chart.getHypedArtists"
        'limit 1)
 
@@ -84,4 +84,17 @@
 (event 'method "event.getInfo"
        'event 328799)
 
+(user 'method "user.getInfo"
+      'user "greghendershott")
+
+;; Show recent tracks for a user
+(struct track (name album artist) #:transparent)
+(let ([js (user 'method "user.getRecentTracks"
+                'user "greghendershott"
+                'limit 25)])
+  (define text (string->symbol "#text"))
+  (for/list ([x (dict-refs js 'recenttracks 'track)])
+    (track (dict-refs x 'name)
+           (dict-refs x 'album text)
+           (dict-refs x 'artist text))))
 |#
