@@ -77,6 +77,7 @@
                    (position-line end)
                    (position-col end))))
    (tokens data delim)
+   (suppress)
 
    (grammar
 
@@ -91,8 +92,10 @@
     (sections2+-list [() '()]
                      [(sections2+-list section2+) (cons $2 $1)])
 
-    (section1 [(SECTION1 WS title LF content) (md-section $1 $3 $5)])
-    (section2+ [(SECTION2+ WS title LF content) (md-section $1 $3 $5)])
+    (section1 [(SECTION1 WS title LF content) (md-section $1 $3 $5)]
+              [(SECTION1 WS title)            (md-section $1 $3 '(""))])
+    (section2+ [(SECTION2+ WS title LF content) (md-section $1 $3 $5)]
+               [(SECTION2+ WS title)            (md-section $1 $3 '(""))])
 
     (content [(content-list) (reverse $1)])
     (content-list [() '()]
@@ -130,6 +133,8 @@
   (port-count-lines! in)
   (markdown-parser (lambda () (markdown-lexer in))))
 
+#|
+
 (define str
 #<<--
 # Intro
@@ -164,7 +169,6 @@ Level 3 content.
 (let ([in (open-input-string str)])
   (parse-markdown in))
 
-
 #;
 (call-with-input-file "imgur.md" parse-markdown)
 #;
@@ -174,12 +178,12 @@ Level 3 content.
 #;
 (call-with-input-file "example.md" parse-markdown)
 
+|#
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(require rackunit)
-
-#;
-(let ()
+(module+ test
+  (require rackunit)
   (define str
 #<<--
 # Intro
@@ -206,42 +210,36 @@ Level 3 content.
 
 --
 )
+
   (check-true
    (match (parse-markdown (open-input-string str))
      [(list
-       (md-section
-        1
-        "Intro"
-        '("Some stuff. This pound -- # -- should be treated as literal.\n"))
-       (md-section 2 "Some more documentation as a subsection." '("\nBlah blah.\n"))
-       (md-section
-        2
-        "Request"
+       (md-section-group
+        (md-section
+         1
+         "Intro"
+         '("Some stuff. This pound -- # -- should be treated as literal.\n"))
         (list
-         "\n"
-         (md-code-block (position 145 11 0)
-                        (position 161 12 0)
-                        '(#"SOME CODE\nHERE.\n"))
-         "\n"))
-       (md-section
-        2
-        "Response"
-        (list (md-code-block (position 184 17 0)
-                             (position 204 17 0)
-                             '(#"Another code block.\n"))))
-       (md-section 3 "Level 3" '("Level 3 content."))
-       (md-section 4 "Level 4" '()))
+         (md-section
+          2
+          "Some more documentation as a subsection."
+          '("\nBlah blah.\n"))
+         (md-section
+          2
+          "Request"
+          (list
+           "\n"
+           (md-code-block (position 145 11 0)
+                          (position 161 12 0)
+                          '(#"SOME CODE\nHERE.\n"))
+           "\n"))
+         (md-section
+          2
+          "Response"
+          (list (md-code-block (position 184 17 0)
+                               (position 204 17 0)
+                               '(#"Another code block.\n"))))
+         (md-section 3 "Level 3" '("Level 3 content."))
+         (md-section 4 "Level 4" '()))))
       #t]
      [else #f])))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-;;    '(1    1   1 2 2   1 3  1)
-;; => '((1) (1) (1 2 2) (1 3) 1)
-
-;; (define xs (list 1 1 2 3 1 4 2 1 1))
-;; (define (group xs)
-;;   (define (top xs)
-;;     (cond [(emtpy? xs) '()]
-;;           [(= 1 (car xs)
