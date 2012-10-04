@@ -129,7 +129,7 @@ requests and responses, with some of the parts constant and others
 variable (parameterized). For example:
 
 ```
-GET /user/{user}/item{item}
+GET /user/{user}/item/{item}
     ?param={}
     &api_key={key}
     &format=json
