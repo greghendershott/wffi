@@ -95,9 +95,9 @@ specification, it must use a certain format:
 
 The special `Request` and `Response` sections:
 
-1. Must be level 2, using `##`, "under" (following) a level 1 section
-   specified using `#`. (The "underline style" of marking sections is
-   not recognized.)
+1. Must be level 2, using `##`, following a level 1 section specified
+   using `#`. (Markdown's "underline" notation for sections is not
+   recognized for this purpose.)
 
 2. Must be named exactly `Request:` and `Response:` respectively
    (although the trailing colon in optional).
@@ -105,20 +105,20 @@ The special `Request` and `Response` sections:
 The `Response` section is optional:
 
    - **Client**: The response template may be omitted if this is to be
-     used solely for an FFI for a client. Because an FFI will probably
-     just put the response status and _all_ the response headers in a
-     dictionary. Plus much of the interesting stuff is in the response
-     entity (body), and it is beyond the scope of this to try to
-     parameterize formats varying from JSON to XML to whatever. Even
-     so, it may be may be helpful to include the section for
-     documentation value, at least if the response includes special
+     used solely for an FFI for a client. An FFI probably won't use a
+     template; instead just putting the response status and _all_ the
+     response headers in a dictionary. Plus much of the interesting
+     stuff is in the response entity (body), and it is beyond the
+     scope of this to try to parameterize formats varying from JSON to
+     XML to whatever. Even so, it may be may be helpful to include the
+     section for documentation value, if say the response uses special
      headers.
 
-   - **Server**: If this is to be used when implementing a server, the
-     `Response` section should be mandatory. It's helpful
-     documentation. Plus a server framework might use the response
-     template to assist preparing the HTTP response. Doing so is good
-     because your documentation and actual behavior stay in sync.
+   - **Server**: If this is to be used when implementing/documenting
+     your own service, provide a `Response` section. It's helpful
+     documentation. Plus a server framework can use the response
+     template to prepare the HTTP response. Doing so syncs your
+     documentation and actual behavior.
 
 
 ## HTTP message templates
@@ -126,7 +126,17 @@ The `Response` section is optional:
 The HTTP message templates are very similar to what you see in
 real-world web service documentation. They look like simplified HTTP
 requests and responses, with some of the parts constant and others
-variable (parameterized).
+variable (parameterized). For example:
+
+```
+GET /user/{user}/item{item}
+    ?param={}
+    &api_key={key}
+    &format=json
+    &[page=1]
+    &[limit=50]
+```
+
 
 ### Conveniences
 
@@ -141,7 +151,7 @@ are normally required in an HTTP message:
 A long series of query parameters may be split across multiple lines
 using indenting, following a common style (e.g. Amazon). For instance:
 
-````
+```
 POST /some/path/
      ?qp1=1
      &qp2=2
@@ -149,7 +159,7 @@ POST /some/path/
 Header0: Value0
 Header1: Value1
    ... <remainder of request> ...
-````
+```
 
 ### Key/value notation
 
@@ -193,7 +203,7 @@ a server and an FFI for clients. The notation below uses just
 
 The following request template has examples of these:
 
-````
+```
 GET /user/{user}/items/{item}
     ?query-param={}
     &[optional-query-param={}]
@@ -204,7 +214,7 @@ Header-With-Alias: {alias}
 Header-With-Contant-Value: Constant Value
 [Optional-Header-With-Variable-Value: {}]
 [Optional-Header-With-Contant-Value: 10000]
-````
+```
 
 ## BNF for templated requests
 
