@@ -14,7 +14,7 @@ it easier to structure requests and to destructure responses.
 
 3. Parsed to support a web service framework for servers to provide
 the service. Making it easier to route and destructure requests and
-to stucture responses.
+to structure responses.
 
 This project implements a Racket language parser, FFI, and service
 framework. However the markdown layout and message template is not
@@ -140,7 +140,7 @@ GET /user/{user}/item/{item}
 
 ### Conveniences
 
-The templated HTTP message grammar allows you to omit some parts that
+The template HTTP message grammar allows you to omit some parts that
 are normally required in an HTTP message:
 
 - You may omit the `HTTP/1.0` or `HTTP/1.1` ending on the request
@@ -211,16 +211,16 @@ GET /user/{user}/items/{item}
     &[optional-constant-query-param=1]
 Header: {}
 Header-With-Alias: {alias}
-Header-With-Contant-Value: Constant Value
+Header-With-Constant-Value: Constant Value
 [Optional-Header-With-Variable-Value: {}]
-[Optional-Header-With-Contant-Value: 10000]
+[Optional-Header-With-Constant-Value: 10000]
 ```
 
-## BNF for templated requests
+## BNF for template requests
 
 ** TO-DO **
 
-## BNF for templated responses
+## BNF for template responses
 
 ** TO-DO **
 
@@ -293,7 +293,7 @@ a={a}&b={b}
 
 > > _Note_: This section is me cribbing some AWS SDB documentation. In
 > >  other words, creating this markdown file for an existing web service
-> >  should be _almost_ a copy-and-paste excercise. That's the idea,
+> >  should be _almost_ a copy-and-paste exercise. That's the idea,
 > >  anyway.
 
 The CreateDomain operation creates a new domain. The domain name must
@@ -336,7 +336,7 @@ Date: {}
 
 From `markdown.rkt`:
 
-Given the pathname of a markdown file, `wffi-lib` parses the file into
+Given the path name of a markdown file, `wffi-lib` parses the file into
 a `(listof api?)`, where each `api` corresponds to one web service
 function.
 
@@ -354,4 +354,4 @@ returns a `dict` of results.
 
 ## Framework for a server
 
-See `server.rkt` for a barebones web service framework.
+See `server.rkt` for a bare-bones web service framework.
