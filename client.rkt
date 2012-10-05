@@ -141,9 +141,16 @@
 
 (define/contract (do-request a d endpoint)
   (api? dict? (-> string?) . -> . dict?)
+  (define-values (scheme host port path query fragment) (split-uri (endpoint)))
   (define-values (method path+query heads data) (dict->request a d))
   (define uri (string-append (endpoint) path+query))
-  (call/input-request "1.1" method uri heads
+  (call/input-request "1.1"
+                      method
+                      uri
+                      (dict-set* heads
+                                 'Host host
+                                 'Date (seconds->gmt-string)
+                                 'Connection "close")
                       (lambda (in h)
                         (response->dict a h (read-entity/bytes in h)))))
 
