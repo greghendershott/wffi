@@ -1,0 +1,8 @@
+# horseebooksipsum.com
+
+# Get
+
+## Request
+````
+GET /api/v1/{paragraphs}
+````
