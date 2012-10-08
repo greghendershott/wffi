@@ -4,7 +4,9 @@
   http://developer.musicmetric.com/sentiment.html. Huh. Should handle
   same as http/head's heads-string->dict and heads-dict->string handle
   it. To store multi values for one key in the dict, separate them
-  with \n?
+  with \n?  Or, just say in that case that the dict must be an
+  association list, which is a type of dict that _can_ handle multi
+  keys?
 
 - Try doing some services that require authentication.
 
