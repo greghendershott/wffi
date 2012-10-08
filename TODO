@@ -1,9 +1,15 @@
 - Finish fleshing out the Imgur, G+, and last.fm services in examples/
 
+- Query parameters may be duplicated -- ex:
+  http://developer.musicmetric.com/sentiment.html. Huh. Should handle
+  same as http/head's heads-string->dict and heads-dict->string handle
+  it. To store multi values for one key in the dict, separate them
+  with \n?
+
 - Try doing some services that require authentication.
 
-- Try some AWS services with an Authoriziation header that requires
-  calcuulating a signature based on other request elements. Allow a
+- Try some AWS services with an Authorization header that requires
+  calculating a signature based on other request elements. Allow a
   dict value to be a `lambda`, which is called with the dictionary
   after all non-lambda values are present??
 
