@@ -147,10 +147,10 @@
   (call/input-request "1.1"
                       method
                       uri
-                      (dict-set* heads
-                                 'Host host
-                                 'Date (seconds->gmt-string)
-                                 'Connection "close")
+                      (maybe-dict-set* heads
+                                       'Host host
+                                       'Date (seconds->gmt-string)
+                                       'Connection "close")
                       (lambda (in h)
                         (response->dict a h (read-entity/bytes in h)))))
 
