@@ -5,15 +5,15 @@
 (define/contract (dict-merge . ds)
   (() #:rest (listof dict?) . ->* . dict?)
   (match ds
-    ;; If first is dict-can-functional-set? just reuse it as the base
-    ;; dict.
+    ;; If first is dict-can-functional-set? reuse it as the base
+    ;; dict, to save work.
     [(list (? dict-can-functional-set? d0) ds ...)
      (for/fold ([d0 d0])
                ([d (in-list ds)])
        (for/fold ([d0 d0])
                  ([(k v) (in-dict d)])
          (dict-set d0 k v)))]
-    ;; IF first isn't dict-can-functional-set?, make an empty hash to
+    ;; If first isn't dict-can-functional-set?, make an empty hash to
     ;; be the base dict.
     [(list d0 ds ...)
      (for/fold ([d0 (hash)])
