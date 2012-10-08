@@ -49,20 +49,18 @@
   ;; (define body (alist->form-urlencoded (filter-map to-cons b)))
   (values method path+query heads #f))
 
-#;
-(define ex (wffi-obj (wffi-lib "example.md") "Example GET API"))
-#;
-(dict->request ex (hash 'user "Greg"
-                        'item 1
-                        'qa "qa"
-                        'qb "qb"
-                        'Host "foobar.com"
-                        'Authorization "blah"
-                        'Date "today"
-                        'alias "foo"
-                        'Optional-Var 999
-                        'Optional-Const 1
-                        ))
+;; (define ex (wffi-obj (wffi-lib "example.md") "Example GET API"))
+;; (dict->request ex (hash 'user "Greg"
+;;                         'item 1
+;;                         'qa "qa"
+;;                         'qb "qb"
+;;                         'Host "foobar.com"
+;;                         'Authorization "blah"
+;;                         'Date "today"
+;;                         'alias "foo"
+;;                         'Optional-Var 999
+;;                         'Optional-Const 1
+;;                         ))
 
 ;; Client: From an HTTP response that has already been matched with a
 ;; api?, fill a dict? with all of the parameterized values.
@@ -83,19 +81,16 @@
    `([entity . ,e])
    ))
 
-#;
-(response->dict
- ex
- (string-join (list "HTTP/1.1 200 OK"
-                    "Date: today"
-                    "Content-Type: application/x-www-form-urlencoded"
-                    "Content-Length: 7"
-                    ""
-                    "")
-              "\r\n")
- "a=1&b=2")
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (response->dict
+;;  ex
+;;  (string-join (list "HTTP/1.1 200 OK"
+;;                     "Date: today"
+;;                     "Content-Type: application/x-www-form-urlencoded"
+;;                     "Content-Length: 7"
+;;                     ""
+;;                     "")
+;;               "\r\n")
+;;  "a=1&b=2")
 
 (define (path-syms xs)
   (filter-map (lambda (x)
@@ -135,10 +130,6 @@
 
 ;;(api-outputs ex)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; for use by client
-
 (define/contract (do-request a d endpoint)
   (api? dict? (-> string?) . -> . dict?)
   (define-values (scheme host port path query fragment) (split-uri (endpoint)))
@@ -153,8 +144,6 @@
                                        'Connection "close")
                       (lambda (in h)
                         (response->dict a h (read-entity/bytes in h)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define symbol->keyword (compose1 string->keyword symbol->string))
 (define keyword->symbol (compose1 string->symbol keyword->string))
@@ -203,8 +192,6 @@
   (define kws (map car xs))
   (define vs (map cdr xs))
   (keyword-apply f kws vs (list)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define/contract (wffi-dict-proc lib name endpoint)
   ((listof api?) string? (-> string?) . -> . (dict? . -> . dict?))
