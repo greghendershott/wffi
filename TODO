@@ -1,3 +1,13 @@
+- So I just learned about Google API discovery service, and its JSON
+  format. In light of that, perhaps wffi be split into two pieces:
+
+  - Something that parses markdown into the Google API JSON format.
+    I think this could be more lightweight for simple web services.
+
+  - An "FFI" for Racket that keys off the GAPI JSON format (whether
+    that comes directly from Google for one of their services, or a
+    3rd party using that format, or from the markdown parser).
+
 - Finish fleshing out the Imgur, G+, and last.fm services in examples/
 
 - Query parameters may be duplicated -- ex:
