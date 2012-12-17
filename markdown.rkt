@@ -29,9 +29,11 @@
 (define/contract (markdown->api in)
   (input-port? . -> . api?)
   (define xs (parse-markdown in))
-  (define endpoint (match xs
-                     [(list 1st rst ...) (md-section-group->endpoint 1st)]
-                     [else #f]))
+  (define endpoint
+    (match xs
+      [(list 1st rst ...) (md-section-group->endpoint 1st)]
+      [else (error 'markdown->api
+                   "\"\nEndpoint: <URI>\n\" not found in first section.")]))
   (api endpoint
        (filter-map md-section-group->api-func xs)))
 
