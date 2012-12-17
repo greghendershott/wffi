@@ -96,7 +96,7 @@ specification, it must use a certain format:
 The special `Request` and `Response` sections:
 
 1. Must be level 2, using `##`, following a level 1 section specified
-   using `#`. (Markdown's "underline" notation for sections is not
+   using `#`. (Markdown's "underline" notation for sections is _not_
    recognized for this purpose.)
 
 2. Must be named exactly `Request:` and `Response:` respectively
@@ -106,19 +106,19 @@ The `Response` section is optional:
 
    - **Client**: The response template may be omitted if this is to be
      used solely for an FFI for a client. An FFI probably won't use a
-     template; instead just putting the response status and _all_ the
+     template; instead it will put the response status and _all_ the
      response headers in a dictionary. Plus much of the interesting
      stuff is in the response entity (body), and it is beyond the
      scope of this to try to parameterize formats varying from JSON to
      XML to whatever. Even so, it may be may be helpful to include the
-     section for documentation value, if say the response uses special
-     headers.
+     section for documentation value, for example if the response uses
+     special headers.
 
    - **Server**: If this is to be used when implementing/documenting
-     your own service, provide a `Response` section. It's helpful
+     your own service, do provide a `Response` section. It's helpful
      documentation. Plus a server framework can use the response
      template to prepare the HTTP response. Doing so syncs your
-     documentation and actual behavior.
+     service's documentation and actual behavior.
 
 
 ## HTTP message templates
