@@ -23,8 +23,7 @@
 (define/contract (wffi-obj lib name)
   ((listof api?) string? . -> . api?)
   (define a (findf (lambda (x) (string=? name (api-name x))) lib))
-  (cond [a a]
-        [else (error 'wffi-obj "can't find ~s" name)]))
+  (or a (error 'wffi-obj "can't find ~s" name)))
 
 (define/contract (markdown->apis in)
   (input-port? . -> . (listof api?))
