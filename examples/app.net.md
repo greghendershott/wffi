@@ -4,6 +4,8 @@ See https://github.com/appdotnet/api-spec.
 
 Currently this is only non-authenticated APIs.
 
+Endpoint: https://alpha-api.app.net
+
 # User posts
 ## Request
 ````

@@ -3,10 +3,16 @@
 (require "key-value.rkt")
 
 (provide (struct-out api)
-         init-api
+         (struct-out api-func)
+         init-api-func
          (all-from-out "key-value.rkt"))
 
 (struct api
+        (endpoint   ;URI string?
+         funcs      ;(listof api-func?)
+         ) #:transparent)
+
+(struct api-func
         (name        ;string?
          desc        ;string?
          route-px    ;pregexp?
@@ -18,14 +24,14 @@
         ) #:transparent)
 
 
-(define/contract (init-api name desc
-                           req-method req-path req-query req-head resp-head)
+(define/contract (init-api-func name desc req-method req-path req-query
+                                req-head resp-head)
   (string? string? symbol? (listof (or/c string? variable?))
            (listof keyval/c) (listof keyval/c) (listof keyval/c)
-           . -> . api?)
-  (api name desc
-       (route-px req-method req-path)
-       req-method req-path req-query req-head resp-head))
+           . -> . api-func?)
+  (api-func name desc
+            (route-px req-method req-path)
+            req-method req-path req-query req-head resp-head))
      
 (define (route-px req-method req-path)
   (pregexp
@@ -37,6 +43,6 @@
                    (match x
                      [(variable k) "(.+?)"]
                      [(? string? x) (regexp-quote x)]
-                     [else (error 'init-api)]))
+                     [else (error 'init-api-func)]))
                  "")
     "\\s+")))

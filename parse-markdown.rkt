@@ -18,9 +18,9 @@
 ;; portions. The resulting error messages will pinpoint the location
 ;; in the overall markdown file.
 
-(struct md-section-group (self subsections) #:transparent)
-(struct md-section (level title content) #:transparent)
-(struct md-code-block (start-pos end-pos text) #:transparent)
+(struct md-section-group (self subsections)       #:transparent)
+(struct md-section       (level title content)    #:transparent)
+(struct md-code-block    (start-pos end-pos text) #:transparent)
 
 (define-tokens data (DATUM WS CODEBLOCK SECTION1 SECTION2+))
 (define-empty-tokens delim (LF EOF))

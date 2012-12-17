@@ -10,6 +10,8 @@ you're ok with the 50 uploads per hour limit, then the anonymous API
 might be for you. All credits and limits are per ip address only and
 are not associated with the API key.
 
+Endpoint: https://api.imgur.com
+
 
 # Stats
 

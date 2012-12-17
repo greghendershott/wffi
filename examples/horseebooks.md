@@ -1,5 +1,7 @@
 # horseebooksipsum.com
 
+Endpoint: http://horseebooksipsum.com
+
 # Get
 
 ## Request

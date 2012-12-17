@@ -2,6 +2,8 @@
 
 See <https://developers.google.com/+/api/>.
 
+Endpoint: https://www.googleapis.com
+
 # Get person
 
 Get a person's profile.

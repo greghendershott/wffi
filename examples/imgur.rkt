@@ -31,7 +31,6 @@
             ([k ks])
     (dict-ref d k)))
 
-(define endpoint (make-parameter "https://api.imgur.com"))
 (define lib (wffi-lib "imgur.md"))
 
 (define (chain . fs)
@@ -40,7 +39,7 @@
 (define-syntax-rule (defproc name api-name)
   (begin (define name (chain hash
                              add-common-parameters
-                             (wffi-dict-proc lib api-name endpoint)
+                             (wffi-dict-proc lib api-name)
                              (lambda (x) (check-response (syntax-e #'name) x))))
          (provide name)))
 

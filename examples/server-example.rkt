@@ -69,18 +69,18 @@ asdfasdfasdf
 
 (require (planet gh/http))
 (define lib (wffi-lib "../README.md"))
-(register-api! (wffi-obj lib "Example GET API")
-               (lambda (d)
-                 (hash 'Status "200 OK"
-                       'Date (seconds->gmt-string)
-                       'type "text/plain"
-                       'Content-Length 0
-                       'Content-Type "text/plain"
-                       'body "")))
-(register-api! (wffi-obj lib "Example POST API")
-               (lambda (d)
-                 (hash 'Status "201 Created"
-                       'date (seconds->gmt-string))))
+(register-api-func! (wffi-obj lib "Example GET API")
+                    (lambda (d)
+                      (hash 'Status "200 OK"
+                            'Date (seconds->gmt-string)
+                            'type "text/plain"
+                            'Content-Length 0
+                            'Content-Type "text/plain"
+                            'body "")))
+(register-api-func! (wffi-obj lib "Example POST API")
+                    (lambda (d)
+                      (hash 'Status "201 Created"
+                            'date (seconds->gmt-string))))
 
 (let ()
   (displayln (dispatch example-get-request))

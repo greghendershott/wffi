@@ -4,6 +4,8 @@ See <http://www.last.fm/api/intro>.
 
 This file defines only _anonymous_ services.
 
+Endpoint: http://ws.audioscrobbler.com
+
 # Chart
 
 Get various things from the chart.

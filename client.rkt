@@ -16,11 +16,12 @@
          wffi-dict-proc
          wffi-lib
          wffi-obj
-         api->markdown
-         (struct-out api))
+         api-func->markdown
+         (struct-out api)
+         (struct-out api-func))
 
 (define/contract (dict->request a d)
-  (api? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
+  (api-func? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
       [(keyval k (constant v)) (cons k v)]
@@ -32,7 +33,7 @@
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
-  (match-define (api _ _ _ m p q h _) a)
+  (match-define (api-func _ _ _ m p q h _) a)
   (define path
     (string-join (for/list ([x p])
                    (match x
@@ -63,9 +64,9 @@
 ;;                         ))
 
 ;; Client: From an HTTP response that has already been matched with a
-;; api?, fill a dict? with all of the parameterized values.
+;; api-func?, fill a dict? with all of the parameterized values.
 (define/contract (response->dict a h e)
-  (api? string? (or/c bytes? string?) . -> . dict?)
+  (api-func? string? (or/c bytes? string?) . -> . dict?)
   (dict-merge
    `([HTTP-Ver . ,(extract-http-ver h)]
      [HTTP-Code . ,(extract-http-code h)]
@@ -113,8 +114,8 @@
   (string<=? (symbol->string a) (symbol->string b)))
 
 (define/contract (api-inputs a)
-  (api? . -> . (values (listof symbol?) (listof symbol?)))
-  (match-define (api _ _ _ m p q h _) a)
+  (api-func? . -> . (values (listof symbol?) (listof symbol?)))
+  (match-define (api-func _ _ _ m p q h _) a)
   (define path-req (path-syms p))
   (define-values (req opt) (syms (append q h)))
   (values (sort (append path-req req) symbol<=?)
@@ -123,7 +124,7 @@
 ;;(api-inputs ex)
 
 (define (api-outputs a)
-  (define h (api-resp-head a))
+  (define h (api-func-resp-head a))
   (define-values (req opt) (syms (append h)))
   (values (sort req symbol<=?)
           (sort opt symbol<=?)))
@@ -131,10 +132,10 @@
 ;;(api-outputs ex)
 
 (define/contract (do-request a d endpoint)
-  (api? dict? (-> string?) . -> . dict?)
-  (define-values (scheme host port path query fragment) (split-uri (endpoint)))
+  (api-func? dict? string? . -> . dict?)
+  (define-values (scheme host port path query fragment) (split-uri endpoint))
   (define-values (method path+query heads data) (dict->request a d))
-  (define uri (string-append (endpoint) path+query))
+  (define uri (string-append endpoint path+query))
   (call/input-request "1.1"
                       method
                       uri
@@ -152,21 +153,21 @@
 
 ;; This is the fundamental procedure: dict? -> dict?
 (define/contract (make-api-dict-procedure a endpoint)
-  (api? (-> string?) . -> . (dict? . -> . dict?))
+  (api-func? string? . -> . (dict? . -> . dict?))
   (lambda (d)
     (do-request a d endpoint)))
 
 ;; This makes a function where the dict may be supplied as key/value
 ;; pairs as with `hash`: 'key value ... ... -> dict?
 (define (make-api-rest-procedure a endpoint)
-  (api? (-> string?) . -> . procedure?)
+  (api-func? string? . -> . procedure?)
   (compose1 (make-api-dict-procedure a endpoint)
             hash))
 
 ;; This makes a function where they're supplied as keyword arguments:
 ;; #:keyword value ... ... -> dict?
 (define/contract (make-api-keyword-procedure a endpoint)
-  (api? (-> string?) . -> . procedure?)
+  (api-func? string? . -> . procedure?)
   (define f (make-keyword-procedure
              (lambda (kws vs . rest)
                (do-request a
@@ -193,14 +194,14 @@
   (define vs (map cdr xs))
   (keyword-apply f kws vs (list)))
 
-(define/contract (wffi-dict-proc lib name endpoint)
-  ((listof api?) string? (-> string?) . -> . (dict? . -> . dict?))
-  (make-api-dict-procedure (wffi-obj lib name) endpoint))
+(define/contract (wffi-dict-proc lib name)
+  (api? string? . -> . (dict? . -> . dict?))
+  (make-api-dict-procedure (wffi-obj lib name) (api-endpoint lib)))
 
-(define/contract (wffi-rest-proc lib name endpoint)
-  ((listof api?) string? (-> string?) . -> . procedure?)
-  (make-api-rest-procedure (wffi-obj lib name) endpoint))
+(define/contract (wffi-rest-proc lib name)
+  (api? string? . -> . procedure?)
+  (make-api-rest-procedure (wffi-obj lib name) (api-endpoint lib)))
 
-(define/contract (wffi-kwd-proc lib name endpoint)
-  ((listof api?) string? (-> string?) . -> . procedure?)
-  (make-api-keyword-procedure (wffi-obj lib name) endpoint))
+(define/contract (wffi-kwd-proc lib name)
+  (api? string? . -> . procedure?)
+  (make-api-keyword-procedure (wffi-obj lib name) (api-endpoint)))

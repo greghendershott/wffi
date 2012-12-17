@@ -7,9 +7,9 @@
          (struct-out keyval)
          keyval/c)
 
-;; A  variable IS A KIND OF value.
-;; A  constant IS A KIND OF value.
-;; An optional IS A KIND OF value that HAS A variable or constant value.
+;; A  variable IS A (kind of) value.
+;; A  constant IS A (kind of) value.
+;; An optional IS A (kind of) value that HAS A variable or constant value.
 
 (struct value () #:transparent)
 (struct variable value (name) #:transparent) ;name: symbol?

@@ -7,22 +7,23 @@
          "split.rkt"
          "dict-merge.rkt")
 
-(provide apis
-         register-api!
+(provide current-api-funcs
+         register-api-func!
          dispatch
-         try-api?
-         request-matches-api?
+         try-api-func?
+         request-matches-api-func?
          wffi-lib
          wffi-obj
-         api->markdown
-         (struct-out api))
+         api-func->markdown
+         (struct-out api)
+         (struct-out api-func))
 
-;; From an HTTP request that has already been matched with an api?,
+;; From an HTTP request that has already been matched with an api-func?,
 ;; fill a dict? with all of the parameterized values.
 (define/contract (request->dict a s)
-  (api? string? . -> . dict?)
+  (api-func? string? . -> . dict?)
   (define-values (m p q h e) (split-request s))
-  (define pt (api-req-path a))
+  (define pt (api-func-req-path a))
   (displayln pt)
   (dict-merge
    (for/hash ([v (regexp-split #rx"/" p)]
@@ -55,7 +56,7 @@ a=1&b=2
 )
 
 (define/contract (dict->response a d)
-  (api? dict? . -> . (values string? dict? (or/c #f bytes?)))
+  (api-func? dict? . -> . (values string? dict? (or/c #f bytes?)))
   (define (to-cons x)
     (match x
       [(keyval k (constant v)) (cons k v)]
@@ -67,7 +68,7 @@ a=1&b=2
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
-  (define h (api-resp-head a))
+  (define h (api-func-resp-head a))
   (displayln h)
   (define status (format "HTTP/~a ~a ~a"
                          (dict-ref d 'HTTP-Ver "1.0")
@@ -85,21 +86,22 @@ a=1&b=2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dispatch
 
-(define apis (make-parameter (make-hash))) ;hashof api? => (dict? -> dict?)
-(define (register-api! a proc)
-  (hash-set! (apis) a proc))
+(define current-api-funcs (make-parameter (make-hash)))
+                                        ;hashof api-func? => (dict? -> dict?)
+(define (register-api-func! a proc)
+  (hash-set! (current-api-funcs) a proc))
 
-(define/contract (request-matches-api? a r)
-  (api? string? . -> . boolean?)
-  (regexp-match? (api-route-px a) r))
+(define/contract (request-matches-api-func? a r)
+  (api-func? string? . -> . boolean?)
+  (regexp-match? (api-func-route-px a) r))
 
-(define/contract (try-api? a f r)
-  (api? (dict? . -> . dict?) string? . -> . (or/c #f string?))
-  (cond [(request-matches-api? a r)
+(define/contract (try-api-func? a f r)
+  (api-func? (dict? . -> . dict?) string? . -> . (or/c #f string?))
+  (cond [(request-matches-api-func? a r)
          (let* ([dict-req (request->dict a r)]
                 [dict-resp (f dict-req)])
            (log-debug (format "=== Request matched ~s\nIN==> ~v\n<==OUT ~v"
-                              (api-name a) dict-req dict-resp))
+                              (api-func-name a) dict-req dict-resp))
            (define-values (s h e) (dict->response a dict-resp))
            (string-append s "\r\n"
                           (string-join (map (lambda (x)
@@ -111,8 +113,8 @@ a=1&b=2
 
 (define/contract (dispatch r)
   (string? . -> . string?)
-  (or (for/or ([(a f) (in-hash (apis))])
-          (try-api? a f r))
+  (or (for/or ([(a f) (in-hash (current-api-funcs))])
+          (try-api-func? a f r))
       (404-response)))
 
 (define (404-response)
