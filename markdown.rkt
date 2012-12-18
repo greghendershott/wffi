@@ -8,17 +8,38 @@
          "parse-response.rkt"
          )
 
-(provide wffi-lib
+(provide current-markdown-files-path
+         wffi-lib
          wffi-obj
          markdown->api
          api-func->markdown)
 
 (define current-source (make-parameter ""))
 
+(define current-markdown-files-path
+  (make-parameter (build-path
+                   (find-system-path 'home-dir) "src" "webapi-markdown")))
+
+(define (file-exists s)
+  (and (file-exists? s) s))
+
+(define (file-exists-in-md-dir s)
+  (and (current-markdown-files-path)
+       (not (regexp-match? #px"^\\s*$" (current-markdown-files-path)))
+       (file-exists (build-path (current-markdown-files-path) s))))
+
+(define (find-md-file s)
+  (define rtn (or (file-exists s)
+                  (file-exists-in-md-dir s)))
+  (unless rtn
+    (error 'wffi-lib "Can't find webapi markdown file ~s" s))
+  rtn)
+
 (define/contract (wffi-lib s)
   (path-string? . -> . api?)
-  (parameterize ([current-source s])
-    (call-with-input-file s markdown->api)))
+  (let ([s (find-md-file s)])
+    (parameterize ([current-source s])
+      (call-with-input-file s markdown->api))))
 
 (define/contract (wffi-obj lib name)
   (api? string? . -> . api-func?)
