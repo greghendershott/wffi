@@ -121,7 +121,7 @@
                [else value])))
 
 (define/contract (parse-template-response source in)
-  (string? input-port? . -> . any)
+  (path-string? input-port? . -> . any)
   (port-count-lines! in)
   ((template-response-parser source) (lambda () (template-response-lexer in))))
 
