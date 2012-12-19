@@ -33,7 +33,7 @@
        (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
              [else (cons k v)])]
       [else (error 'dict->request "~v" x)]))
-  (match-define (api-func _ _ _ m p q h _) a)
+  (match-define (api-func _ _ m p q h _) a)
   (define path
     (string-join (for/list ([x p])
                    (match x
@@ -115,7 +115,7 @@
 
 (define/contract (api-inputs a)
   (api-func? . -> . (values (listof symbol?) (listof symbol?)))
-  (match-define (api-func _ _ _ m p q h _) a)
+  (match-define (api-func _ _ m p q h _) a)
   (define path-req (path-syms p))
   (define-values (req opt) (syms (append q h)))
   (values (sort (append path-req req) symbol<=?)

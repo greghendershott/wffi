@@ -76,7 +76,7 @@
             (match-define (list (list req-method (list req-path req-query) ver)
                                 req-head req-body) req)
             (match-define (list resp-stat resp-head resp-body) resp)
-            (init-api-func name (string-join docs "")
+            (api-func name (string-join docs "")
                       req-method req-path req-query req-head resp-head)]
            [else #f])]  ;ignore this section
     [else #f]))         ;ignore this section
