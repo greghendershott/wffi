@@ -68,8 +68,8 @@ asdfasdfasdf
 ;; Use the api to receive requests as a server and dispatch them.
 
 (require (planet gh/http))
-(define lib (wffi-lib "../README.md"))
-(register-api-func! (wffi-obj lib "Example GET API")
+(define lib (wffi-lib "server-example.md"))
+(register-api-func! (wffi-obj lib "Get user")
                     (lambda (d)
                       (hash 'Status "200 OK"
                             'Date (seconds->gmt-string)
@@ -77,7 +77,7 @@ asdfasdfasdf
                             'Content-Length 0
                             'Content-Type "text/plain"
                             'body "")))
-(register-api-func! (wffi-obj lib "Example POST API")
+(register-api-func! (wffi-obj lib "Create user")
                     (lambda (d)
                       (hash 'Status "201 Created"
                             'date (seconds->gmt-string))))
