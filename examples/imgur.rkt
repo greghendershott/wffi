@@ -3,12 +3,13 @@
 (require wffi/client
          json)
 
-(define (read-api-key [file (build-path (find-system-path 'home-dir)
-                                        ".imgur-api-key")])
-  (match (file->string file #:mode 'text)
-    [(regexp "^\\s*(.*?)\\s*(?:[\r\n]*)$" (list _ k)) k]
-    [else (error 'read-api-key "Bad format for ~a" file)]))
-(define api-key (make-parameter (read-api-key)))
+(define (read-client-id [file (build-path (find-system-path 'home-dir)
+                                          ".imgur-api-client")])
+  (for/or ([s (file->lines file #:mode 'text)])
+    (match s
+      [(regexp "^\\s*(?i:ClientID)\\s*=\\s*(.*?)\\s*(?:[\r\n]*)$" (list _ k)) k]
+      [else #f])))
+(define client-id (make-parameter (read-client-id)))
 
 ;; A helper to take the response dict and check the status code. If
 ;; 200, convert the bytes to a jsexpr. Else raise an error.
@@ -23,7 +24,7 @@
                      
 (define (add-common-parameters h)
   (hash-set* h
-             'key (api-key)))
+             'Authorization (format "Client-ID ~a" (client-id))))
 
 ;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
 (define (dict-refs d . ks)
@@ -31,7 +32,7 @@
             ([k ks])
     (dict-ref d k)))
 
-(define lib (wffi-lib "imgur.md"))
+(define lib (wffi-lib "imgur.v3.md"))
 
 (define (chain . fs)
   (apply compose1 (reverse fs)))
@@ -43,27 +44,23 @@
                              (lambda (x) (check-response (syntax-e #'name) x))))
          (provide name)))
 
-(defproc stats "Stats")
-(defproc upload "Upload")
-(defproc album "Album")
-(defproc image "Image")
-(defproc delete-image "Delete Image")
+(defproc image-info "Image")
+(defproc image-delete "Image Deletion")
+(defproc image-upload "Image Upload")
+(defproc image-update-info "Update Image Information")
 
-(define (upload-uri uri name)
-  (upload 'image uri
-          'type "url"
-          'name name))
+(define (image-upload/uri uri name)
+  (image-upload 'image uri
+                'type "url"
+                'name name))
 
 ;; Test
 #|
 
-(stats) 
-(stats 'view "today")
-(stats 'view "week")
-
-(upload 'key (api-key) 'image "http://racket-lang.org/logo.png"
-        'type "url" 'name "Racket logo")
-(upload-uri "http://racket-lang.org/logo.png" "Racket logo")
+(image-upload 'image "http://racket-lang.org/logo.png"
+              'type "url"
+              'name "Racket logo")
+(image-upload/uri "http://racket-lang.org/logo.png" "Racket logo")
 
 (album 'hash 2)
 (image 'hash 2)
