@@ -139,7 +139,7 @@ So where this all leads, is:
   marshaled to/from a HTTP represenation. And in fact the data might
   be marshaled into some _other_ representation (like a queue), on its
   way to/from an HTTP representation or non-HTTP representation (like
-  a unit test harness).
+  a unit test harness or mock).
 
 - It is easy enough in Racket to create (programatically) a wrapper
   function that takes individual `#keyword` arguments instead of a
@@ -155,33 +155,41 @@ Open questions
 --------------
 
 Other than the special case of a form URL encoded POST entity, should
-we try to parameterize request and response entities? Perhaps that's
+we try to parameterize request and response _entities_? Perhaps that's
 taking the idea a step too far. Query parameters, headers, and many
 paths are all just key/value dictionaries dressed up in various ways.
 But many request and response entites are not simply dictionaries,
 they are things like XML and JSON. Maybe we should leave well enough
 alone.
 
-If we do attempt that, we'll need/want some more advanced templating,
-such as Kleene stars for repeating pattenrns.
+If we do attempt that, we'll need/want some more advanced template
+pattern matching, including e.g. Kleene stars for repeating pattenrns.
 
 For instance imagine specifying the response's entity using this
 real-world example from Amazon Route 53:
 
-HTTP/1.1 200 OK
-Content-Type: application/xml
-<?xml version="1.0" encoding="UTF-8"?>
-<ListResourceRecordSetsResponse xmlns="https://route53.amazonaws.com/doc/2012-02-29/">
-   <ResourceRecordSets>
-      <ResourceRecordSet>
-         <Name>{DNS domain name}</Name>
-         <Type>{DNS record type}</Type>
-         <TTL>{time to live in seconds}</TTL>
-         <ResourceRecords>
-            <ResourceRecord>
-               <Value>{applicable value for the DNS record type}</Value>
-            </ResourceRecord>
-         </ResourceRecords>
-      </ResourceRecordSet>
-      ...
-<ListResourceRecordSetsResponse>
+    HTTP/1.1 200 OK
+    Content-Type: application/xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <ListResourceRecordSetsResponse xmlns="https://route53.amazonaws.com/doc/2012-02-29/">
+       <ResourceRecordSets>
+          <ResourceRecordSet>
+             <Name>{DNS domain name}</Name>
+             <Type>{DNS record type}</Type>
+             <TTL>{time to live in seconds}</TTL>
+             <ResourceRecords>
+                <ResourceRecord>
+                   <Value>{applicable value for the DNS record type}</Value>
+                </ResourceRecord>
+             </ResourceRecords>
+          </ResourceRecordSet>
+          ...
+    <ListResourceRecordSetsResponse>
+
+The second to last line has a `...` indicating that there may be zero
+or more occurrences of the `<ResourceRecordSet>` element.
+
+Ultimately, I don't think this is wortwhile. Most web services these
+days use XML or JSON for entities. There are fine libraries to handle
+these representations of data, to an arbitrary level of
+complexity. This isn't broken, let's not fix it.
