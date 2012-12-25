@@ -93,7 +93,8 @@
 
 (define (parse-resp subs)
   (match subs
-    [(list-no-order (md-section 2 (or "Response" "Response:")
+    [(list-no-order (md-section 2
+                                (or "Response" "Response:")
                                 (list-no-order (md-code-block beg end code)
                                                _ ...))
                     _ ...)
