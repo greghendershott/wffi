@@ -1,7 +1,6 @@
 #lang racket
 
-(require wffi/client
-         json)
+(require wffi/client)
 
 (define (read-api-key [file (build-path (find-system-path 'home-dir)
                                         ".last.fm-api-key")])
@@ -10,47 +9,22 @@
     [else (error 'read-api-key "Bad format for ~a" file)]))
 (define api-key (make-parameter (read-api-key)))
 
-;; A helper to take the response dict and check the status code. If
-;; 200, convert the bytes to a jsexpr. Else raise an error.
-(define (check-response who d)
-  (define code (dict-ref d 'HTTP-Code))
-  (cond [(= code 200) (bytes->jsexpr (dict-ref d 'entity))]
-        [else (error who "HTTP Status ~a ~s\n~a"
-                     code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
-
 (define (add-common-parameters h)
   (hash-set* h
              'api-key (api-key)))
 
-;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
-(define (dict-refs d . ks)
-  (for/fold ([d d])
-            ([k ks])
-    (dict-ref d k)))
+(wffi-define-all "last.fm.md" add-common-parameters check-response/json)
 
-(define lib (wffi-lib "last.fm.md"))
+;; last.fm is not very RESTful: It exposes a very small number of
+;; "objects" as HTTP resources, where a query parameter called
+;; `method` is an OOP method (not HTTP method). For example, the
+;; function `artst.getEvents` isn't an HTTP resource `artist/events`,
+;; instead it consists of the `artist?method=getEvents`.  Here we just
+;; expose that.
+;; 
+;; Instead, a slightly higher-level wrapper could make a function for
+;; each distinct object-and-method: e.g. artist-get-events.
 
-(define (chain . fs)
-  (apply compose1 (reverse fs)))
-
-(define-syntax-rule (defproc name api-name)
-  (begin (define name (chain hash
-                             add-common-parameters
-                             (wffi-dict-proc lib api-name)
-                             (lambda (x) (check-response (syntax-e #'name) x))))
-         (provide name)))
-
-;; last.fm exposes a small number of "objects", each at their own
-;; resource, with a `method` query parameters. (As opposed to each
-;; object-and-method being a distinct resource.)  Here we just expose
-;; each "object". It might be a nicer interface if we made a wrapper
-;; function for each distinct object-and-method, e.g. artist-events.
-
-(defproc chart "Chart")
-(defproc artist "Artist")
-(defproc album "Album")
-(defproc event "Event")
-(defproc user "User")
 
 ;; Examples
 #|

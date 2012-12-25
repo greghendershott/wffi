@@ -3,19 +3,30 @@
 (require net/uri-codec
          (planet gh/http/request)
          (planet gh/http/head)
+         json
          "api.rkt"
          "markdown.rkt"
          "split.rkt"
-         "dict-merge.rkt")
-         
-(provide make-api-keyword-procedure
-         api-inputs
+         "dict-merge.rkt"
+         (for-syntax racket/syntax
+                     racket/string
+                     racket/match
+                     "api.rkt"
+                     "markdown.rkt"))
+
+(provide make-api-dict-procedure
+         make-api-rest-procedure
+         make-api-keyword-procedure
+         api-func-inputs
          apply-dict
          wffi-kwd-proc
          wffi-rest-proc
          wffi-dict-proc
          wffi-lib
          wffi-obj
+         wffi-define-all
+         dict-refs
+         check-response/json
          api-func->markdown
          (struct-out api)
          (struct-out api-func))
@@ -113,7 +124,7 @@
 (define (symbol<=? a b)
   (string<=? (symbol->string a) (symbol->string b)))
 
-(define/contract (api-inputs a)
+(define/contract (api-func-inputs a)
   (api-func? . -> . (values (listof symbol?) (listof symbol?)))
   (match-define (api-func _ _ m p q h _) a)
   (define path-req (path-syms p))
@@ -121,15 +132,11 @@
   (values (sort (append path-req req) symbol<=?)
           (sort opt symbol<=?)))
 
-;;(api-inputs ex)
-
-(define (api-outputs a)
+(define (api-func-outputs a)
   (define h (api-func-resp-head a))
   (define-values (req opt) (syms (append h)))
   (values (sort req symbol<=?)
           (sort opt symbol<=?)))
-
-;;(api-outputs ex)
 
 (define/contract (do-request a d endpoint)
   (api-func? dict? string? . -> . dict?)
@@ -175,7 +182,7 @@
                                 (map keyword->symbol kws)
                                 vs)
                            endpoint))))
-  (define-values (req opt) (api-inputs a))
+  (define-values (req opt) (api-func-inputs a))
   (define req-kws (map symbol->keyword req))
   (define opt-kws (map symbol->keyword opt))
   (define all-kws (sort (append req-kws opt-kws) keyword<=?))
@@ -205,3 +212,78 @@
 (define/contract (wffi-kwd-proc lib name)
   (api? string? . -> . procedure?)
   (make-api-keyword-procedure (wffi-obj lib name) (api-endpoint)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
+(define (dict-refs d . ks)
+  (for/fold ([d d])
+            ([k ks])
+    (dict-ref d k)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; A helper to take the response dict and check the status code. If
+;; 200, convert the bytes to a jsexpr. Else raise an error.
+;;
+;; This may be supplied as the `post` arg to `define-all-procs/dict`
+(define (check-response/json who d)
+  (define code (dict-ref d 'HTTP-Code))
+  (cond [(= code 200)
+         (match (dict-ref d 'Content-Type)
+           [(pregexp "^application/json") (bytes->jsexpr (dict-ref d 'entity))]
+           [else (dict-ref d 'entity)])]
+        [else (error who "HTTP Status ~a ~s\n~a"
+                     code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (chain . fs)
+  (apply compose1 (reverse fs)))
+
+(begin-for-syntax
+ (define (racketize s)
+   ;; "Foo Bar" -> "foo-bar"
+   ;; "Foo.bar" -> "foo-bar"
+   (string-join (map string-downcase (regexp-split #rx"[ .]" s))
+                "-"))
+
+ (define (no-md-suffix s)
+   (match s
+     [(regexp "^(.+?)-md$" (list _ base)) base]
+     [else s])))
+
+;; Load the wffi definition in lib-name, define an ID for the lib, and
+;; define a wrapper function for everything in the lib.  Each wrapper
+;; function is defined as a composition sandwich: `before`, HTTP
+;; request, `after`. Typically `before` will add to the dict any
+;; common parameters (such as an API key or Authorization for the
+;; service), and `after` will process the response (such as doing
+;; bytes->jsexpr for a successful response or calling `error` for a
+;; failure response).
+;;
+;; lib-name: string?
+;; before:   (dict? -> dict?)
+;; after:    (symbol? dict? -> dict?)
+(define-syntax (wffi-define-all stx)
+  (syntax-case stx ()
+    [(_ lib-name before after)
+     (string? (syntax-e #'lib-name))
+     (let* ([lib (wffi-lib (syntax-e #'lib-name))])
+       (with-syntax ([lib-id (format-id #'lib-name
+                                        "~a-lib"
+                                        (no-md-suffix
+                                         (racketize (syntax-e #'lib-name))))])
+         #`(begin
+             (define lib-id (wffi-lib lib-name))
+             #,@(for/list ([func (api-funcs lib)])
+                  (with-syntax ([name (api-func-name func)]
+                                [id (format-id stx
+                                               "~a"
+                                               (racketize
+                                                (api-func-name func)))])
+                    #'(define id (chain hash
+                                        before
+                                        (wffi-dict-proc lib-id name)
+                                        (lambda (x) (after (syntax-e #'name) x))
+                                        )))))))]))

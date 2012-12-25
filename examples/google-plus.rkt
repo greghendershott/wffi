@@ -1,7 +1,6 @@
 #lang racket
 
-(require wffi/client
-         json)
+(require wffi/client)
 
 (define (read-api-key [file (build-path (find-system-path 'home-dir)
                                         ".google-api-key")])
@@ -10,46 +9,32 @@
     [else (error 'read-api-key "Bad format for ~a" file)]))
 (define api-key (make-parameter (read-api-key)))
 
-;; A helper to take the response dict and check the status code. If
-;; 200, convert the bytes to a jsexpr (this is extremely Google+
-;; specific, not a role model for how to deal with other web services)
-;; else raise an error.
-(define (check-response who d)
-  (define code (dict-ref d 'HTTP-Code))
-  (cond [(= code 200) (bytes->jsexpr (dict-ref d 'entity))]
-        [else (error who "HTTP Status ~a ~s\n~a"
-                     code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
-
 (define (add-common-parameters h)
   (hash-set* h
              'key (api-key)
              'pretty-print "false"))
 
-;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
-(define (dict-refs d . ks)
-  (for/fold ([d d])
-            ([k ks])
-    (dict-ref d k)))
-
 ;; TO-DO: Make paginated versions of these which take nextPageToken from the
 ;; response and supply it as &pageToken, until done.
 
-(define lib (wffi-lib "google-plus.md"))
+;; (define lib (wffi-lib "google-plus.md"))
 
-(define (chain . fs)
-  (apply compose1 (reverse fs)))
+;; (define (chain . fs)
+;;   (apply compose1 (reverse fs)))
 
-(define-syntax-rule (defproc name api-name)
-  (begin (define name (chain hash
-                             add-common-parameters
-                             (wffi-dict-proc lib api-name)
-                             (lambda (x) (check-response (syntax-e #'name) x))))
-         (provide name)))
+;; (define-syntax-rule (defproc name api-name)
+;;   (begin (define name (chain hash
+;;                              add-common-parameters
+;;                              (wffi-dict-proc lib api-name)
+;;                              (lambda (x) (check-response/json (syntax-e #'name) x))))
+;;          (provide name)))
 
-(defproc get-person "Get person")
-(defproc search-people "Search people")
-(defproc people-activity "People activity")
-(defproc activity-list "Activity list")
+;; (defproc get-person "Get person")
+;; (defproc search-people "Search people")
+;; (defproc people-activity "People activity")
+;; (defproc activity-list "Activity list")
+
+(wffi-define-all "google-plus.md" add-common-parameters check-response/json)
 
 ;; examples:
 

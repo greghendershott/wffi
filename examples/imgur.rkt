@@ -1,7 +1,6 @@
 #lang racket
 
-(require wffi/client
-         json)
+(require wffi/client)
 
 (define (read-client-id [file (build-path (find-system-path 'home-dir)
                                           ".imgur-api-client")])
@@ -11,43 +10,11 @@
       [else #f])))
 (define client-id (make-parameter (read-client-id)))
 
-;; A helper to take the response dict and check the status code. If
-;; 200, convert the bytes to a jsexpr. Else raise an error.
-(define (check-response who d)
-  (define code (dict-ref d 'HTTP-Code))
-  (cond [(= code 200)
-         (cond [(equal? "application/json" (dict-ref d 'Content-Type))
-                (bytes->jsexpr (dict-ref d 'entity))]
-               [else (dict-ref d 'entity)])]
-        [else (error who "HTTP Status ~a ~s\n~a"
-                     code (dict-ref d 'HTTP-Text) (dict-ref d 'entity))]))
-                     
 (define (add-common-parameters h)
   (hash-set* h
              'Authorization (format "Client-ID ~a" (client-id))))
 
-;; When dealing with JSON, often need to do nested hash-refs. Analgesic:
-(define (dict-refs d . ks)
-  (for/fold ([d d])
-            ([k ks])
-    (dict-ref d k)))
-
-(define lib (wffi-lib "imgur.v3.md"))
-
-(define (chain . fs)
-  (apply compose1 (reverse fs)))
-
-(define-syntax-rule (defproc name api-name)
-  (begin (define name (chain hash
-                             add-common-parameters
-                             (wffi-dict-proc lib api-name)
-                             (lambda (x) (check-response (syntax-e #'name) x))))
-         (provide name)))
-
-(defproc image-info "Image")
-(defproc image-delete "Image Deletion")
-(defproc image-upload "Image Upload")
-(defproc image-update-info "Update Image Information")
+(wffi-define-all "imgur.v3.md" add-common-parameters check-response/json)
 
 (define (image-upload/uri uri name)
   (image-upload 'image uri
