@@ -15,7 +15,7 @@
       [(constant x) (hasheq 'constant x)]
       [(variable x) (hasheq 'variable (symbol->string x))]
       [else x]))
-  (match-define (api-func name docs _ method path query head resp-head) a)
+  (match-define (api-func name docs method path query head resp-head) a)
   (hasheq 'name name
           'docs docs
           'request-method (symbol->string method)
@@ -33,14 +33,14 @@
       [(hash-table ('constant x)) (constant x)]
       [(hash-table ('variable x)) (variable (string->symbol x))]
       [(hash-table (k v)) (keyval k (->a v))]))
-  (init-api-func (hash-ref j 'name)
-                 (hash-ref j 'docs)
-                 (string->symbol (hash-ref j 'request-method))
-                 (map ->a (hash-ref j 'request-path))
-                 (map ->a (hash-ref j 'request-query))
-                 (map ->a (hash-ref j 'request-head))
-                 (map ->a (hash-ref j 'response-head))
-                 ))
+  (api-func (hash-ref j 'name)
+            (hash-ref j 'docs)
+            (string->symbol (hash-ref j 'request-method))
+            (map ->a (hash-ref j 'request-path))
+            (map ->a (hash-ref j 'request-query))
+            (map ->a (hash-ref j 'request-head))
+            (map ->a (hash-ref j 'response-head))
+            ))
 
 (module+ test
   (require rackunit
