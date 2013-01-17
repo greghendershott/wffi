@@ -25,7 +25,7 @@ finds an `api-function?` function by name.
 
 From `client.rkt`:
 
-Given an `api?`` from `wffi-lib` and the name of a function,
+Given an `api?` from `wffi-lib` and the name of a function,
 `wffi-dict-proc` returns a `procedure` to call that web service
 function.  The procedure takes a `dict` of inputs, makes the HTTP
 request, and returns a `dict` of results.
