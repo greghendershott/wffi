@@ -80,7 +80,9 @@ asdfasdfasdf
 (register-api-func! (wffi-obj lib "Create user")
                     (lambda (d)
                       (hash 'Status "201 Created"
-                            'date (seconds->gmt-string))))
+                            'Date (seconds->gmt-string)
+                            'Content-Length 0
+                            'Content-Type "text/plain")))
 
 (let ()
   (displayln (dispatch example-get-request))

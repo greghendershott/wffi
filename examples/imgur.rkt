@@ -1,6 +1,7 @@
 #lang racket
 
 (require wffi/client)
+(provide (all-defined-out))
 
 (define (read-client-id [file (build-path (find-system-path 'home-dir)
                                           ".imgur-api-client")])
@@ -16,32 +17,34 @@
 
 (wffi-define-all "imgur.v3.md" add-common-parameters check-response/json)
 
+;; Example of a handy wrapper of a wrapper:
 (define (image-upload/uri uri name)
   (image-upload 'image uri
                 'type "url"
                 'name name))
+
+;; Show all
+;; ;; (map api-func-name (api-funcs imgur-v3-lib))
 
 ;; Test
 #|
 
 (image-upload 'image "http://racket-lang.org/logo.png"
               'type "url"
-              'name "Racket logo")
+              'name "Racket logo)"
 (image-upload/uri "http://racket-lang.org/logo.png" "Racket logo")
-
-(album 'hash 2)
-(image 'hash 2)
 
 ;; Upload an image, get its "hash" and "deletehash" ID from the
 ;; response, pass hash to `image` to see the attributes, and pass
 ;; deletehash to `delete-hash` to delete it.
-(let* ([js (upload-uri "http://racket-lang.org/logo.png" "Racket logo")]
-       [h (dict-refs js 'upload 'image 'hash)]
-       [dh (dict-refs js 'upload 'image 'deletehash)])
+(let* ([js (image-upload/uri "http://racket-lang.org/logo.png" "Racket logo")]
+       [id (dict-refs js 'data 'id)]
+       [dh (dict-refs js 'data 'deletehash)])
   (displayln "Image uploaded. Get its attributes:")
-  (pretty-print (image 'hash h))
+  (pretty-print (image 'id id))
+  ;; Note: Delete doesn't work in Imgur v3 API without OAuth
   (displayln "Deleting it:")
-  (delete-image 'deletehash dh))
+  (image-delete 'deletehash dh))
 
 |#
 
