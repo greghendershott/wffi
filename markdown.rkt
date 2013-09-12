@@ -104,7 +104,7 @@
 ;; Cqll the parser function `f` on the `code`, setting the port
 ;; location to `pos` so that error reporting will be for the the
 ;; containing file from which we got the code. Also uses the
-;; `current-source` parameter which is the name of teh source file.
+;; `current-source` parameter which is the name of the source file.
 (define/contract (call-parser f code pos)
   (procedure? bytes? position? . -> . any)
   (define in (open-input-bytes code))
