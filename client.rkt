@@ -275,7 +275,8 @@
        (with-syntax ([LIB-PATH lib-path]
                      [LIB-ID (format-id #'LIB-NAME
                                         "~a-lib"
-                                        (no-md-suffix (racketize lib-path)))])
+                                        (no-md-suffix
+                                         (racketize (syntax-e #'LIB-NAME))))])
          #`(begin
              (define LIB-ID (wffi-lib LIB-PATH))
              #,@(for/list ([func (api-funcs lib)])
