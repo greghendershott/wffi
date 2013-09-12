@@ -5,8 +5,7 @@
          "split.rkt"
          "parse-markdown.rkt"
          "parse-request.rkt"
-         "parse-response.rkt"
-         )
+         "parse-response.rkt")
 
 (provide current-markdown-files-path
          wffi-lib
@@ -16,30 +15,13 @@
 
 (define current-source (make-parameter ""))
 
-(define current-markdown-files-path
-  (make-parameter (build-path
-                   (find-system-path 'home-dir) "src" "webapi-markdown")))
+;; This is deprecated and no longer used.
+(define current-markdown-files-path (make-parameter ""))
 
-(define (file-exists s)
-  (and (file-exists? s) s))
-
-(define (file-exists-in-md-dir s)
-  (and (current-markdown-files-path)
-       (not (regexp-match? #px"^\\s*$" (current-markdown-files-path)))
-       (file-exists (build-path (current-markdown-files-path) s))))
-
-(define (find-md-file s)
-  (define rtn (or (file-exists s)
-                  (file-exists-in-md-dir s)))
-  (unless rtn
-    (error 'wffi-lib "Can't find webapi markdown file ~s" s))
-  rtn)
-
-(define/contract (wffi-lib s)
+(define/contract (wffi-lib p)
   (path-string? . -> . api?)
-  (let ([s (find-md-file s)])
-    (parameterize ([current-source s])
-      (call-with-input-file s markdown->api))))
+  (parameterize ([current-source p])
+    (call-with-input-file p markdown->api)))
 
 (define/contract (wffi-obj lib name)
   (api? string? . -> . api-func?)

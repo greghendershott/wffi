@@ -11,6 +11,7 @@
          (for-syntax racket/syntax
                      racket/string
                      racket/match
+                     racket/path
                      "api.rkt"
                      "markdown.rkt"))
 
@@ -262,28 +263,29 @@
 ;; bytes->jsexpr for a successful response or calling `error` for a
 ;; failure response).
 ;;
-;; lib-name: string?
+;; lib-name: string? just base name (e.g. "foo.md") relative to source
 ;; before:   (dict? -> dict?)
 ;; after:    (symbol? dict? -> dict?)
 (define-syntax (wffi-define-all stx)
   (syntax-case stx ()
-    [(_ lib-name before after)
-     (string? (syntax-e #'lib-name))
-     (let* ([lib (wffi-lib (syntax-e #'lib-name))])
-       (with-syntax ([lib-id (format-id #'lib-name
+    [(_ LIB-NAME BEFORE AFTER)
+     (let* ([lib-path (build-path (path-only (syntax-source stx))
+                                  (syntax-e #'LIB-NAME))]
+            [lib (wffi-lib lib-path)])
+       (with-syntax ([LIB-PATH lib-path]
+                     [LIB-ID (format-id #'LIB-NAME
                                         "~a-lib"
-                                        (no-md-suffix
-                                         (racketize (syntax-e #'lib-name))))])
+                                        (no-md-suffix (racketize lib-path)))])
          #`(begin
-             (define lib-id (wffi-lib lib-name))
+             (define LIB-ID (wffi-lib LIB-PATH))
              #,@(for/list ([func (api-funcs lib)])
-                  (with-syntax ([name (api-func-name func)]
-                                [id (format-id stx
+                  (with-syntax ([NAME (api-func-name func)]
+                                [ID (format-id stx
                                                "~a"
                                                (racketize
                                                 (api-func-name func)))])
-                    #'(define id (chain hash
-                                        before
-                                        (wffi-dict-proc lib-id name)
-                                        (lambda (x) (after (syntax-e #'name) x))
+                    #'(define ID (chain hash
+                                        BEFORE
+                                        (wffi-dict-proc LIB-ID NAME)
+                                        (lambda (x) (AFTER (syntax-e #'NAME) x))
                                         )))))))]))
