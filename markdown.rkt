@@ -115,9 +115,6 @@
                            (position-offset pos))
   (f (current-source) in))
 
-;; test
-;; (wffi-lib "examples/horseebooks.md")
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Return a string with documentation for the API function, in
