@@ -170,7 +170,7 @@
 (define (make-api-rest-procedure a endpoint)
   (api-func? string? . -> . procedure?)
   (compose1 (make-api-dict-procedure a endpoint)
-            hash))
+            hasheq))
 
 ;; This makes a function where they're supplied as keyword arguments:
 ;; #:keyword value ... ... -> dict?
