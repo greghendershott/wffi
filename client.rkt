@@ -5,9 +5,9 @@
          (planet gh/http/head)
          json
          "api.rkt"
+         "dict-merge.rkt"
          "markdown.rkt"
          "split.rkt"
-         "dict-merge.rkt"
          (for-syntax racket/syntax
                      racket/string
                      racket/match
