@@ -34,17 +34,25 @@
 
 (define/contract (dict->request a d)
   (api-func? dict? . -> . (values string? string? dict? (or/c #f bytes?)))
-  (define (to-cons x)
+  (define (to-conses x)
+    ;; (or/c keyval? optional?) -> (listof (or/c #f (cons/c symbol? string?)))
+    (define (ref name d key)
+      (unless (dict-has-key? d key)
+        (error 'dict->request "Missing required parameter ~a." name))
+      (match (dict-ref d key)
+        [(list vs ...) (for/list ([v vs])
+                         (cons name (~a v)))]
+        [v (list (cons name (~a v)))]))
     (match x
-      [(keyval k (constant v)) (cons k v)]
-      [(keyval k (variable v)) (cons k (format "~a" (dict-ref d v)))]
+      [(keyval k (constant v)) (list (cons k v))]
+      [(keyval k (variable v)) (ref k d v)]
       [(optional (keyval k (variable v)))
-       (cond [(dict-has-key? d v) (cons k (format "~a" (dict-ref d v)))]
+       (cond [(dict-has-key? d v) (ref k d v)]
              [else #f])]
       [(optional (keyval k (constant v)))
-       (cond [(dict-has-key? d k) (cons k (format "~a" (dict-ref d k)))]
-             [else (cons k v)])]
-      [else (error 'dict->request "~v" x)]))
+       (cond [(dict-has-key? d k) (ref k d k)]
+             [else (list (cons k v))])]
+      [else (error 'dict->request "Unknown value: ~v" x)]))
   (match-define (api-func _ _ m p q h _) a)
   (define path
     (string-join (for/list ([x p])
@@ -53,27 +61,33 @@
                      [(variable k) (format "~a" (dict-ref d k))]
                      [else (error 'dict->request)]))
                  ""))
-  (define query (alist->form-urlencoded (filter-map to-cons q)))
+  (define query (alist->form-urlencoded (append* (filter-map to-conses q))))
   (define method (string-upcase (symbol->string m)))
   (define path+query (string-append path
                                     (cond [(string=? "" query) ""]
                                           [else (string-append "?" query)])))
-  (define heads (filter-map to-cons h))
+  (define heads (append* (filter-map to-conses h)))
   ;; (define body (alist->form-urlencoded (filter-map to-cons b)))
-  (values method path+query heads #f))
+  (define body (dict-ref d 'entity #""))
+  (values method path+query heads body))
 
-;; (define ex (wffi-obj (wffi-lib "example.md") "Example GET API"))
-;; (dict->request ex (hash 'user "Greg"
-;;                         'item 1
-;;                         'qa "qa"
-;;                         'qb "qb"
-;;                         'Host "foobar.com"
-;;                         'Authorization "blah"
-;;                         'Date "today"
-;;                         'alias "foo"
-;;                         'Optional-Var 999
-;;                         'Optional-Const 1
-;;                         ))
+;; ;; Example:
+;; (require racket/runtime-path)
+;; (define-runtime-path example.md "example.md")
+;; (define ex (wffi-obj (wffi-lib example.md) "Example GET API"))
+;; (dict->request ex (hasheq 'user "Greg"
+;;                           'item 1
+;;                           'qa "qa"
+;;                           'qb '("qb1" "qb2") ;repeats OK as list
+;;                           'Host "foobar.com"
+;;                           'Authorization "blah"
+;;                           'Date "today"
+;;                           'Cookie '("cookie1" "cookie2") ;repeats OK
+;;                           'alias "foo"
+;;                           'Optional-Var 999
+;;                           'Optional-Const 1
+;;                           'entity #"wah wah wah"
+;;                           ))
 
 ;; Client: From an HTTP response that has already been matched with a
 ;; api-func?, fill a dict? with all of the parameterized values.
