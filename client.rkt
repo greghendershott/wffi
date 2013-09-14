@@ -1,8 +1,8 @@
 #lang racket
 
 (require net/uri-codec
-         (planet gh/http/request)
-         (planet gh/http/head)
+         http/request
+         http/head
          json
          "api.rkt"
          "dict-merge.rkt"
