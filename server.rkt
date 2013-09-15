@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet gh/http)
+(require http
          net/uri-codec
          "api.rkt"
          "markdown.rkt"
